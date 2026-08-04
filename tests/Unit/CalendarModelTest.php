@@ -234,6 +234,33 @@ final class CalendarModelTest extends TestCase
         self::assertSame('2027-01', $this->defaultMonth($months)->key(), 'opens on the current month when it has performances');
     }
 
+    public function testStateLabelsAndBuyableStatesAreConfigurable(): void
+    {
+        // Marc's flow: "Available" reads as Best Availability; sold-out is unlabeled
+        // but still clickable (more inventory coming).
+        $run = [
+            $this->showtime(1, '2026-12-20 19:30', Availability::AVAILABLE),
+            $this->showtime(2, '2026-12-21 19:30', Availability::SOLD_OUT),
+        ];
+        $model = new CalendarModel(
+            $this->et,
+            $this->dt('2026-12-01'),
+            new BuyLinkBuilder('https://x.test', 1),
+            0,
+            ['available' => 'Best Availability', 'sold_out' => ''],
+            ['available', 'limited', 'sold_out'],
+        );
+        $month = $model->build($run, $this->dt('2026-12-01'), $this->dt('2026-12-01'))[0];
+
+        $best = $this->findDay($month, '2026-12-20')->performances[0];
+        self::assertSame('Best Availability', $best['state_label']);
+        self::assertNotNull($best['buy_url']);
+
+        $soldout = $this->findDay($month, '2026-12-21')->performances[0];
+        self::assertSame('', $soldout['state_label'], 'sold-out is unlabeled');
+        self::assertNotNull($soldout['buy_url'], 'sold-out is still clickable');
+    }
+
     public function testPerformanceCellCarriesPrice(): void
     {
         $run    = [new Showtime(1, $this->dt('2026-12-20 19:30'), Availability::AVAILABLE, 100, '$89', 89)];

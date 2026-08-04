@@ -23,11 +23,13 @@
     {% if months is empty %}
         <p class="ttx-calendar__empty">{{ empty_message }}</p>
     {% else %}
-        <ul class="ttx-calendar__legend">
-            <li class="ttx-calendar__legend-item is-available"><span class="ttx-calendar__swatch" aria-hidden="true"></span>Available</li>
-            <li class="ttx-calendar__legend-item is-limited"><span class="ttx-calendar__swatch" aria-hidden="true"></span>Limited</li>
-            <li class="ttx-calendar__legend-item is-sold_out"><span class="ttx-calendar__swatch" aria-hidden="true"></span>Sold Out</li>
-        </ul>
+        {% if legend_items %}
+            <ul class="ttx-calendar__legend">
+                {% for item in legend_items %}
+                    <li class="ttx-calendar__legend-item is-{{ item.slug }}"><span class="ttx-calendar__swatch" aria-hidden="true"></span>{{ item.label }}</li>
+                {% endfor %}
+            </ul>
+        {% endif %}
 
         <div class="ttx-calendar__viewport">
             {% for month in months %}
@@ -75,7 +77,7 @@
                                                         <span class="ttx-calendar__daydot" aria-hidden="true"></span>
                                                         <ul class="ttx-calendar__perfs">
                                                             {% for perf in day.performances %}
-                                                                {% set perf_label = day.dateLabel ~ ' at ' ~ perf.time ~ ' — ' ~ perf.state_label ~ (perf.price ? ' — from ' ~ perf.price : '') %}
+                                                                {% set perf_label = day.dateLabel ~ ' at ' ~ perf.time ~ (perf.state_label ? ' — ' ~ perf.state_label : '') ~ (perf.price ? ' — from ' ~ perf.price : '') %}
                                                                 <li class="ttx-calendar__perf is-{{ perf.state_slug }}"
                                                                     data-time="{{ perf.time }}"
                                                                     data-state="{{ perf.state_slug }}"

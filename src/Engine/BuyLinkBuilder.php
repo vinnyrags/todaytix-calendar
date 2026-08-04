@@ -39,15 +39,13 @@ final class BuyLinkBuilder
     ) {}
 
     /**
-     * Deep-link for a specific performance. Returns null for sold-out performances
-     * (nothing to buy), so callers can render state without a dead link.
+     * Deep-link for a specific performance — a pure URL builder. Whether a given
+     * state should be clickable is the CALLER's policy (see CalendarModel's
+     * buyableStates), not this builder's: some shows keep sold-out dates clickable
+     * because more inventory is coming.
      */
-    public function forShowtime(Showtime $showtime): ?string
+    public function forShowtime(Showtime $showtime): string
     {
-        if (!$showtime->availability->isBuyable()) {
-            return null;
-        }
-
         $path = strtr($this->pathTemplate, [
             '{show_id}'     => (string) $this->showId,
             '{showtime_id}' => (string) $showtime->id,

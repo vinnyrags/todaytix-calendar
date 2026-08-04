@@ -47,7 +47,51 @@ final class TodayTixCalendarProvider extends Provider
         // Frontend block stylesheet + progressive-enhancement paging script.
         add_action('enqueue_block_assets', [$this, 'enqueueCalendarAssets']);
 
+        // Self-register the "Ticket Calendar" tab on the site's Settings Hub (after
+        // the hub group, which registers at acf/init priority 5). Only fires when a
+        // hub group is configured, so the package stays portable + config-only.
+        add_action('acf/init', [$this, 'registerSettingsTab'], 20);
+
         parent::register();
+    }
+
+    /**
+     * Register the "Ticket Calendar" tab + fields on the configured Settings-Hub
+     * group. The package owns its own settings surface; the consuming site only tells
+     * it which hub group to attach to (config `settings_group`) — no hard dependency
+     * on any particular hub package. Field values are read back in
+     * {@see TodayTixCalendarService::config()}.
+     */
+    public function registerSettingsTab(): void
+    {
+        if (!function_exists('acf_add_local_field')) {
+            return;
+        }
+        $config = $this->container->get(TodayTixCalendarService::class)->config();
+        $group  = (string) ($config['settings_group'] ?? '');
+        if ($group === '') {
+            return; // no hub wired — stay config-filter-only
+        }
+        $order = (int) ($config['settings_order'] ?? 60);
+
+        $add = static function (string $key, int $menuOrder, array $field) use ($group): void {
+            acf_add_local_field(array_merge(
+                ['key' => "field_todaytix_{$key}", 'parent' => $group, 'menu_order' => $menuOrder],
+                $field,
+            ));
+        };
+
+        $add('tab', $order, ['label' => 'Ticket Calendar', 'name' => '', 'type' => 'tab', 'placement' => 'top']);
+        $add('show_id', $order + 1, ['label' => 'TodayTix Show ID', 'name' => 'todaytix_show_id', 'type' => 'number', 'instructions' => "The show's TodayTix id (e.g. 46495). Overrides the code default when set."]);
+        $add('base_url', $order + 2, ['label' => 'White-label Booking URL', 'name' => 'todaytix_base_url', 'type' => 'url', 'instructions' => 'e.g. https://tickets.viewfromthebridgeplay.com — where the Buy buttons point.']);
+        $add('run_start', $order + 3, ['label' => 'Run Start', 'name' => 'todaytix_run_start', 'type' => 'date_picker', 'display_format' => 'F j, Y', 'return_format' => 'Y-m-d', 'first_day' => 0, 'instructions' => 'First month the calendar shows. Blank = derive from the feed.']);
+        $add('run_end', $order + 4, ['label' => 'Run End', 'name' => 'todaytix_run_end', 'type' => 'date_picker', 'display_format' => 'F j, Y', 'return_format' => 'Y-m-d', 'first_day' => 0, 'instructions' => 'Last month the calendar shows. Blank = derive from the feed.']);
+        $add('week_starts_on', $order + 5, ['label' => 'Week Starts On', 'name' => 'todaytix_week_starts_on', 'type' => 'select', 'choices' => [0 => 'Sunday', 1 => 'Monday'], 'default_value' => 0]);
+        $add('states_msg', $order + 6, ['label' => 'Which statuses to show', 'name' => '', 'type' => 'message', 'message' => 'Toggle which availability states appear on the calendar.']);
+        $add('show_available', $order + 7, ['label' => 'Show “Available”', 'name' => 'todaytix_show_available', 'type' => 'true_false', 'ui' => 1, 'default_value' => 1]);
+        $add('show_limited', $order + 8, ['label' => 'Show “Limited”', 'name' => 'todaytix_show_limited', 'type' => 'true_false', 'ui' => 1, 'default_value' => 1]);
+        $add('show_sold_out', $order + 9, ['label' => 'Show “Sold Out”', 'name' => 'todaytix_show_sold_out', 'type' => 'true_false', 'ui' => 1, 'default_value' => 1]);
+        $add('buy_path_template', $order + 10, ['label' => 'Buy-link route (advanced)', 'name' => 'todaytix_buy_path_template', 'type' => 'text', 'instructions' => 'Tokens: {show_id} {showtime_id} {month} {date}. Blank = month-calendar route.']);
     }
 
     /**

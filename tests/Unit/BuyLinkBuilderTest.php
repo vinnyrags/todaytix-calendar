@@ -39,11 +39,16 @@ final class BuyLinkBuilderTest extends TestCase
         self::assertStringNotContainsString('.com//booking', (string) $builder->forShowtime($this->showtime(Availability::LIMITED)));
     }
 
-    public function testSoldOutHasNoBuyLink(): void
+    public function testBuildsAUrlRegardlessOfState(): void
     {
+        // The builder is pure — WHICH states are clickable is the model's policy
+        // (buyableStates), not the builder's. Some shows keep sold-out clickable.
         $builder = new BuyLinkBuilder('https://tickets.viewfromthebridgeplay.com', 46495);
 
-        self::assertNull($builder->forShowtime($this->showtime(Availability::SOLD_OUT)));
+        self::assertSame(
+            'https://tickets.viewfromthebridgeplay.com/booking/calendar/46495/2026-12',
+            $builder->forShowtime($this->showtime(Availability::SOLD_OUT)),
+        );
     }
 
     public function testPerShowtimeTemplateIsAConfigSwap(): void

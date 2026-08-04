@@ -75,11 +75,18 @@ final class TodayTixCalendarService
         $timezone = $this->timezone($config);
         $run      = $this->resolvedRun();
 
+        // Author-controlled status visibility: drop performances whose state is
+        // toggled off. Empty-then-trimmed days/months fall out naturally downstream.
+        $visible = is_array($config['visible_states']) ? $config['visible_states'] : ['available', 'limited', 'sold_out'];
+        $run = array_values(array_filter($run, static fn (Showtime $s): bool => in_array($s->availability->value, $visible, true)));
+
         $model = new CalendarModel(
             $timezone,
             new DateTimeImmutable('now', $timezone),
             new BuyLinkBuilder((string) $config['base_url'], (int) $config['show_id'], (string) $config['buy_path_template']),
             (int) $config['week_starts_on'],
+            is_array($config['state_labels']) ? $config['state_labels'] : [],
+            is_array($config['buyable_states']) ? $config['buyable_states'] : ['available', 'limited'],
         );
 
         [$start, $end] = $this->renderRange($config, $run, $timezone);
@@ -349,7 +356,7 @@ final class TodayTixCalendarService
      *
      * @return array{show_id:int,base_url:string,timezone:string,run_start:string,run_end:string,week_starts_on:int,buy_path_template:string}
      */
-    private function config(): array
+    public function config(): array
     {
         $defaults = [
             'show_id'           => 0,
@@ -361,10 +368,66 @@ final class TodayTixCalendarService
             // Per-performance deep link lands here later (see BuyLinkBuilder); the
             // month route is the safe placeholder until the exact route is confirmed.
             'buy_path_template' => BuyLinkBuilder::MONTH_TEMPLATE,
+            // Which availability states the calendar renders (author-toggleable).
+            'visible_states'    => ['available', 'limited', 'sold_out'],
+            // Per-state display label ('' = no marker/highlight) and which states are
+            // clickable. Generic defaults; a site (e.g. AVFTB) overrides to rename
+            // Available→"Best Availability" and keep sold-out clickable.
+            'state_labels'      => [],
+            'buyable_states'    => ['available', 'limited'],
+            // ACF hub group to attach the "Ticket Calendar" tab to. Empty = no tab,
+            // so the package stays config-filter-only + portable; a consuming site
+            // supplies its Settings-Hub group key here to get the CMS surface.
+            'settings_group'    => '',
+            'settings_order'    => 60,
         ];
 
-        $config = apply_filters('todaytix_calendar/config', $defaults);
+        $filtered = apply_filters('todaytix_calendar/config', $defaults);
+        $config   = array_merge($defaults, is_array($filtered) ? $filtered : []);
 
-        return array_merge($defaults, is_array($config) ? $config : []);
+        // When a hub is wired, CMS field values take precedence (once entered).
+        if ($config['settings_group'] !== '' && function_exists('get_field')) {
+            $config = array_merge($config, $this->cmsConfig());
+        }
+
+        return $config;
+    }
+
+    /**
+     * Read the "Ticket Calendar" hub-tab values (ACF options), returning only the
+     * keys that are actually set — so they overlay, not clobber, the config defaults.
+     *
+     * @return array<string,mixed>
+     */
+    private function cmsConfig(): array
+    {
+        $out = [];
+        $text = [
+            'show_id'           => 'todaytix_show_id',
+            'base_url'          => 'todaytix_base_url',
+            'run_start'         => 'todaytix_run_start',
+            'run_end'           => 'todaytix_run_end',
+            'week_starts_on'    => 'todaytix_week_starts_on',
+            'buy_path_template' => 'todaytix_buy_path_template',
+        ];
+        foreach ($text as $key => $field) {
+            $val = get_field($field, 'option');
+            if ($val === null || $val === '' || $val === false) {
+                continue;
+            }
+            $out[$key] = in_array($key, ['show_id', 'week_starts_on'], true) ? (int) $val : (string) $val;
+        }
+
+        // Status toggles → visible_states. Unset (never saved) counts as ON.
+        $states = [];
+        foreach (['available' => 'todaytix_show_available', 'limited' => 'todaytix_show_limited', 'sold_out' => 'todaytix_show_sold_out'] as $state => $field) {
+            $v = get_field($field, 'option');
+            if ($v === null || $v) {
+                $states[] = $state;
+            }
+        }
+        $out['visible_states'] = $states;
+
+        return $out;
     }
 }

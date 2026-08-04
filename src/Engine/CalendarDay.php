@@ -71,13 +71,22 @@ final class CalendarDay
         return sprintf('%s — %s', $this->dateLabel(), $this->stateLabel());
     }
 
-    /** A day is actionable only if it's in-month, not past, and has a buyable perf. */
+    /**
+     * A day is actionable if any of its performances carries a buy link. Buyability
+     * is the model's policy (see CalendarModel's buyableStates) — a sold-out date can
+     * be clickable — so we read the per-performance links rather than the enum.
+     */
     public function isInteractive(): bool
     {
-        if (!$this->inMonth || $this->isPast || $this->state === null) {
+        if (!$this->inMonth || $this->isPast) {
             return false;
         }
+        foreach ($this->performances as $perf) {
+            if (!empty($perf['buy_url'])) {
+                return true;
+            }
+        }
 
-        return $this->state->isBuyable();
+        return false;
     }
 }

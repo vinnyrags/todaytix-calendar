@@ -184,7 +184,10 @@
 
         var meta = document.createElement('span');
         meta.className = 'ttx-calendar__selector-meta';
-        meta.textContent = price ? (stateLabel + ' · from ' + price) : stateLabel;
+        var parts = [];
+        if (stateLabel) { parts.push(stateLabel); }
+        if (price) { parts.push('from ' + price); }
+        meta.textContent = parts.join(' · ');
         row.appendChild(meta);
 
         if (buyUrl) {

@@ -23,11 +23,23 @@ final class CalendarModel
      * @param int $weekStartsOn 0=Sunday … 6=Saturday. US theatre calendars start
      *                          Sunday; override for a Monday-first skin.
      */
+    /**
+     * @param array<string,string> $stateLabels   Per-state display label (state slug =>
+     *                                             label). An empty string means "no
+     *                                             marker" (rendered as a plain date).
+     *                                             Missing keys fall back to the enum label.
+     * @param string[]             $buyableStates Which states get a buy link. Default is
+     *                                            available+limited; a site can add
+     *                                            'sold_out' to keep sold-out dates
+     *                                            clickable (e.g. more inventory coming).
+     */
     public function __construct(
         private readonly DateTimeZone $timezone,
         private readonly DateTimeImmutable $now,
         private readonly BuyLinkBuilder $buyLinks,
         private readonly int $weekStartsOn = 0,
+        private readonly array $stateLabels = [],
+        private readonly array $buyableStates = ['available', 'limited'],
     ) {}
 
     /**
@@ -185,13 +197,16 @@ final class CalendarModel
             $hasAvailable = $hasAvailable || $showtime->availability === Availability::AVAILABLE;
             $hasLimited   = $hasLimited   || $showtime->availability === Availability::LIMITED;
 
+            $slug     = $showtime->availability->value;
+            $buyable  = !$isPast && in_array($slug, $this->buyableStates, true);
+
             $cells[] = [
                 'id'          => $showtime->id,
                 'time'        => $showtime->timeLabelShort(),
-                'state_slug'  => $showtime->availability->value,
-                'state_label' => $showtime->availability->label(),
+                'state_slug'  => $slug,
+                'state_label' => $this->stateLabels[$slug] ?? $showtime->availability->label(),
                 'price'       => $showtime->priceDisplay,
-                'buy_url'     => $isPast ? null : $this->buyLinks->forShowtime($showtime),
+                'buy_url'     => $buyable ? $this->buyLinks->forShowtime($showtime) : null,
             ];
         }
 

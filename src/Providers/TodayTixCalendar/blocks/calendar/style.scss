@@ -214,7 +214,7 @@
 
 .ttx-calendar__day.is-available .ttx-calendar__daydot { background: var(--ttx-available); }
 .ttx-calendar__day.is-limited   .ttx-calendar__daydot { background: var(--ttx-limited); }
-.ttx-calendar__day.is-sold_out  .ttx-calendar__daydot { background: var(--ttx-soldout); }
+.ttx-calendar__day.is-sold_out  .ttx-calendar__daydot { background: var(--ttx-text-muted); }
 
 /* Per-performance list — a two-show day stacks matinee + evening here. */
 .ttx-calendar__perfs {
@@ -242,14 +242,12 @@
 }
 
 /* State is the COLOUR of the time — the words are dropped; the legend is the key and
-   the per-performance aria-label still names the state for assistive tech. */
+   the per-performance aria-label still names the state for assistive tech. A state
+   whose label is blank in config (e.g. sold-out on a "more inventory coming" show)
+   gets NO highlight — a plain, still-clickable date. */
 .ttx-calendar__perf.is-available .ttx-calendar__perf-time { color: var(--ttx-available); }
 .ttx-calendar__perf.is-limited   .ttx-calendar__perf-time { color: var(--ttx-limited); }
-.ttx-calendar__perf.is-sold_out  .ttx-calendar__perf-time {
-    color: var(--ttx-soldout);
-    text-decoration: line-through;
-    text-decoration-thickness: 1px;
-}
+.ttx-calendar__perf.is-sold_out  .ttx-calendar__perf-time { color: var(--ttx-text); }
 
 /* A buyable performance lifts + tints on hover/focus so it reads as clickable. */
 a.ttx-calendar__perf-link { cursor: pointer; transition: transform 0.12s ease, background-color 0.12s ease; }
@@ -311,7 +309,7 @@ a.ttx-calendar__perf-link:focus-visible { outline: 2px solid var(--ttx-accent); 
 
 .ttx-calendar__selector-row.is-available { border-left-color: var(--ttx-available); }
 .ttx-calendar__selector-row.is-limited   { border-left-color: var(--ttx-limited); }
-.ttx-calendar__selector-row.is-sold_out  { border-left-color: var(--ttx-soldout); opacity: 0.8; }
+.ttx-calendar__selector-row.is-sold_out  { border-left-color: var(--ttx-border); }
 
 .ttx-calendar__selector-time {
     font-weight: 700;
@@ -324,7 +322,7 @@ a.ttx-calendar__perf-link:focus-visible { outline: 2px solid var(--ttx-accent); 
 }
 
 .ttx-calendar__selector-row.is-limited  .ttx-calendar__selector-meta { color: var(--ttx-limited); }
-.ttx-calendar__selector-row.is-sold_out .ttx-calendar__selector-meta { color: var(--ttx-soldout); }
+.ttx-calendar__selector-row.is-sold_out .ttx-calendar__selector-meta { color: var(--ttx-text-muted); }
 
 .ttx-calendar__selector-buy {
     margin-inline-start: auto;

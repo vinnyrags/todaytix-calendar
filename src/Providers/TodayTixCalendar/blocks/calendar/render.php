@@ -20,6 +20,23 @@ $service   = Theme::container()->get(TodayTixCalendarService::class);
 $months    = $service->getCalendar();
 $priceFrom = $service->getPriceFrom();
 
+// Legend from the configured labels: only states that are visible AND have a label
+// (a blank label — e.g. sold-out on a "more inventory coming" show — is omitted).
+$config        = $service->config();
+$stateLabels   = is_array($config['state_labels'] ?? null) ? $config['state_labels'] : [];
+$visibleStates = is_array($config['visible_states'] ?? null) ? $config['visible_states'] : ['available', 'limited', 'sold_out'];
+$defaultLabels = ['available' => 'Available', 'limited' => 'Limited', 'sold_out' => 'Sold Out'];
+$legendItems   = [];
+foreach (['available', 'limited', 'sold_out'] as $slug) {
+    if (!in_array($slug, $visibleStates, true)) {
+        continue;
+    }
+    $label = $stateLabels[$slug] ?? $defaultLabels[$slug];
+    if ($label !== '') {
+        $legendItems[] = ['slug' => $slug, 'label' => $label];
+    }
+}
+
 // Weekday header, Sunday-first to match the engine's default grid.
 $weekdays = [
     ['abbr' => 'Sun', 'full' => 'Sunday'],
@@ -38,6 +55,7 @@ $context['intro']    = isset($attributes['intro']) ? trim((string) $attributes['
 $context['months']   = $months;
 $context['weekdays'] = $weekdays;
 $context['price_from'] = $priceFrom;
+$context['legend_items'] = $legendItems;
 $context['empty_message'] = __('Performance dates will appear here once they go on sale.', 'todaytix-calendar');
 
 Timber::render(__DIR__ . '/calendar.twig', $context);
