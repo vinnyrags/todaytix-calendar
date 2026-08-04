@@ -1,0 +1,50 @@
+{
+  "name": "vincentragosta/todaytix-calendar",
+  "description": "A framework-agnostic TodayTix availability engine plus a WordPress (Mythus + IX) ticket-calendar block. Renders per-performance availability (available / limited / sold out) off the TodayTix white-label feed.",
+  "type": "library",
+  "license": "proprietary",
+  "authors": [
+    {
+      "name": "Vincent Ragosta"
+    }
+  ],
+  "repositories": [
+    {
+      "type": "composer",
+      "url": "https://packages.vincentragosta.io"
+    }
+  ],
+  "require": {
+    "php": ">=8.3"
+  },
+  "require-dev": {
+    "phpunit/phpunit": "^9.6",
+    "vincentragosta/mythus": "^1.4",
+    "vincentragosta/ix": "^1.0"
+  },
+  "suggest": {
+    "vincentragosta/mythus": "Needed by the WordPress layer (Provider/Service/Endpoint). The consuming theme already provides it.",
+    "vincentragosta/ix": "Needed by the IX theme Provider bridge and the block asset build pipeline. The consuming theme already provides it."
+  },
+  "autoload": {
+    "psr-4": {
+      "TodayTixCalendar\\": "src/"
+    }
+  },
+  "autoload-dev": {
+    "psr-4": {
+      "TodayTixCalendar\\Tests\\": "tests/"
+    }
+  },
+  "minimum-stability": "dev",
+  "prefer-stable": true,
+  "config": {
+    "allow-plugins": {
+      "composer/installers": true
+    }
+  },
+  "scripts": {
+    "test": "phpunit",
+    "test:unit": "phpunit --testsuite Unit"
+  }
+}

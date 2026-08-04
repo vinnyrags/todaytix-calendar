@@ -1,0 +1,91 @@
+{
+  "code": 200,
+  "data": [
+    {
+      "_type": "Showtime",
+      "id": 2511756,
+      "datetime": "2026-12-10T19:30:00.000-05:00",
+      "datetimeEpoch": 1796949000,
+      "localDate": "2026-12-10",
+      "localTime": "19:30",
+      "dayOfWeek": "THURSDAY",
+      "regularTickets": {
+        "_type": "RegularTicketsInfo",
+        "availabilityLevel": "LOW",
+        "numAssignedSeatsAvailable": 1,
+        "lowPrice": {
+          "value": 279,
+          "currency": "USD",
+          "display": "$279"
+        }
+      }
+    },
+    {
+      "_type": "Showtime",
+      "id": 2502984,
+      "datetime": "2026-12-15T19:00:00.000-05:00",
+      "datetimeEpoch": 1797379200,
+      "localDate": "2026-12-15",
+      "localTime": "19:00",
+      "dayOfWeek": "TUESDAY",
+      "regularTickets": {
+        "_type": "RegularTicketsInfo",
+        "availabilityLevel": null,
+        "numAssignedSeatsAvailable": 140,
+        "lowPrice": {
+          "value": 89,
+          "currency": "USD",
+          "display": "$89"
+        }
+      }
+    },
+    {
+      "_type": "Showtime",
+      "id": 2502990,
+      "datetime": "2026-12-16T14:00:00.000-05:00",
+      "datetimeEpoch": 1797447600,
+      "localDate": "2026-12-16",
+      "localTime": "14:00",
+      "dayOfWeek": "WEDNESDAY",
+      "regularTickets": {
+        "_type": "RegularTicketsInfo",
+        "availabilityLevel": null,
+        "numAssignedSeatsAvailable": 0,
+        "lowPrice": {
+          "value": 89,
+          "currency": "USD",
+          "display": "$89"
+        }
+      }
+    },
+    {
+      "_type": "Showtime",
+      "id": 2502991,
+      "datetime": "2026-12-16T19:30:00.000-05:00",
+      "datetimeEpoch": 1797467400,
+      "localDate": "2026-12-16",
+      "localTime": "19:30",
+      "dayOfWeek": "WEDNESDAY",
+      "regularTickets": {
+        "_type": "RegularTicketsInfo",
+        "availabilityLevel": null,
+        "numAssignedSeatsAvailable": 120,
+        "lowPrice": {
+          "value": 89,
+          "currency": "USD",
+          "display": "$89"
+        }
+      }
+    },
+    {
+      "_type": "Showtime",
+      "id": 2599001,
+      "datetime": "2026-12-20T19:30:00.000-05:00",
+      "datetimeEpoch": 1797813000,
+      "localDate": "2026-12-20",
+      "localTime": "19:30",
+      "dayOfWeek": "SUNDAY",
+      "regularTickets": null
+    }
+  ]
+}

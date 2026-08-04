@@ -1,0 +1,397 @@
+/**
+ * Ticket calendar — structural styles + neutral ARTHOUSE tokens.
+ *
+ * Everything visual is driven by CSS custom properties scoped to `.ttx-calendar`, so
+ * a per-show skin is a token override in the child theme — this file (markup +
+ * layout) never changes. The defaults below are a restrained, neutral placeholder
+ * for Phase 0; Phase 1 redefines the tokens to match the comp.
+ *
+ * One responsive grid that scales from desktop down to phone (Marc's call — no
+ * separate mobile selector). State is always conveyed by text, never colour alone.
+ */
+
+.ttx-calendar {
+    /* Palette */
+    --ttx-surface: #ffffff;
+    --ttx-surface-muted: #f5f5f4;
+    --ttx-border: #e0ddd7;
+    --ttx-text: #1c1b19;
+    --ttx-text-muted: #8a857c;
+    --ttx-accent: #1c1b19;
+
+    /* State accents (paired with text labels — never the sole signal) */
+    --ttx-available: #2f7a4d;
+    --ttx-available-bg: #eaf4ee;
+    --ttx-limited: #a86a12;
+    --ttx-limited-bg: #fbf1e0;
+    --ttx-soldout: #9a2f2f;
+    --ttx-soldout-bg: #f6ebeb;
+
+    /* Shape & rhythm */
+    --ttx-radius: 6px;
+    --ttx-gap: 4px;
+    --ttx-cell-min-h: clamp(3rem, 10vw, 5.25rem);
+    --ttx-font: inherit;
+
+    font-family: var(--ttx-font);
+    color: var(--ttx-text);
+    max-width: 60rem;
+    margin-inline: auto;
+}
+
+.ttx-calendar__title {
+    margin: 0 0 0.25em;
+    text-align: center;
+}
+
+.ttx-calendar__intro {
+    margin: 0 auto 0.75rem;
+    max-width: 40rem;
+    text-align: center;
+    color: var(--ttx-text-muted);
+}
+
+.ttx-calendar__price-from {
+    margin: 0 0 1.25rem;
+    text-align: center;
+    font-size: 0.95rem;
+    color: var(--ttx-text);
+}
+
+.ttx-calendar__price-from strong {
+    font-weight: 700;
+}
+
+/* Legend --------------------------------------------------------------- */
+.ttx-calendar__legend {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.5rem 1.25rem;
+    margin: 0 0 1rem;
+    padding: 0;
+    list-style: none;
+    font-size: 0.85rem;
+}
+
+.ttx-calendar__legend-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    color: var(--ttx-text-muted);
+}
+
+.ttx-calendar__swatch {
+    inline-size: 0.85rem;
+    block-size: 0.85rem;
+    border-radius: 3px;
+    background: var(--ttx-surface-muted);
+    border: 1px solid var(--ttx-border);
+}
+
+.ttx-calendar__legend-item.is-available .ttx-calendar__swatch { background: var(--ttx-available-bg); border-color: var(--ttx-available); }
+.ttx-calendar__legend-item.is-limited .ttx-calendar__swatch { background: var(--ttx-limited-bg); border-color: var(--ttx-limited); }
+.ttx-calendar__legend-item.is-sold_out .ttx-calendar__swatch { background: var(--ttx-soldout-bg); border-color: var(--ttx-soldout); }
+
+/* Month header --------------------------------------------------------- */
+.ttx-calendar__month-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    margin-bottom: 0.5rem;
+}
+
+.ttx-calendar__month-label {
+    margin: 0;
+    font-size: clamp(1.1rem, 3vw, 1.5rem);
+    text-align: center;
+    flex: 1 1 auto;
+}
+
+.ttx-calendar__month-label:focus-visible {
+    outline: 2px solid var(--ttx-accent);
+    outline-offset: 3px;
+}
+
+.ttx-calendar__nav {
+    flex: 0 0 auto;
+    inline-size: 2.5rem;
+    block-size: 2.5rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    line-height: 1;
+    background: var(--ttx-surface);
+    color: var(--ttx-text);
+    border: 1px solid var(--ttx-border);
+    border-radius: var(--ttx-radius);
+    cursor: pointer;
+    transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.ttx-calendar__nav:hover:not(:disabled) {
+    background: var(--ttx-surface-muted);
+    border-color: var(--ttx-accent);
+}
+
+.ttx-calendar__nav:disabled {
+    opacity: 0.35;
+    cursor: default;
+}
+
+.ttx-calendar__nav:focus-visible {
+    outline: 2px solid var(--ttx-accent);
+    outline-offset: 2px;
+}
+
+/* Grid ----------------------------------------------------------------- */
+.ttx-calendar__grid {
+    inline-size: 100%;
+    border-collapse: separate;
+    border-spacing: var(--ttx-gap);
+    table-layout: fixed;
+}
+
+.ttx-calendar__grid thead th {
+    padding: 0.4rem 0;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--ttx-text-muted);
+}
+
+.ttx-calendar__grid thead abbr {
+    text-decoration: none;
+    border: 0;
+    cursor: help;
+}
+
+.ttx-calendar__day {
+    padding: 0;
+    vertical-align: top;
+    block-size: var(--ttx-cell-min-h);
+    border-radius: var(--ttx-radius);
+    background: var(--ttx-surface-muted);
+}
+
+.ttx-calendar__day.is-outside {
+    background: transparent;
+}
+
+/* The cell wrapper: day number on top, the performance list beneath. */
+.ttx-calendar__cell {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    inline-size: 100%;
+    block-size: 100%;
+    min-block-size: var(--ttx-cell-min-h);
+    padding: clamp(0.25rem, 1.5vw, 0.5rem);
+    border: 1px solid transparent;
+    border-radius: var(--ttx-radius);
+    box-sizing: border-box;
+}
+
+.ttx-calendar__daynum {
+    font-size: clamp(0.8rem, 2.4vw, 1rem);
+    font-weight: 600;
+    line-height: 1;
+    color: var(--ttx-text);
+}
+
+/* Availability dot — the at-a-glance state on the compact mobile grid. Hidden on
+   desktop, where the inline times carry state instead. */
+.ttx-calendar__daydot {
+    display: none;
+    inline-size: 0.5rem;
+    block-size: 0.5rem;
+    border-radius: 50%;
+    background: var(--ttx-text-muted);
+}
+
+.ttx-calendar__day.is-available .ttx-calendar__daydot { background: var(--ttx-available); }
+.ttx-calendar__day.is-limited   .ttx-calendar__daydot { background: var(--ttx-limited); }
+.ttx-calendar__day.is-sold_out  .ttx-calendar__daydot { background: var(--ttx-soldout); }
+
+/* Per-performance list — a two-show day stacks matinee + evening here. */
+.ttx-calendar__perfs {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+}
+
+.ttx-calendar__perf-link {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.1rem 0.3rem;
+    border-radius: 4px;
+    text-decoration: none;
+    color: inherit;
+    line-height: 1.2;
+}
+
+.ttx-calendar__perf-time {
+    font-size: clamp(0.68rem, 2vw, 0.85rem);
+    font-weight: 700;
+}
+
+/* State is the COLOUR of the time — the words are dropped; the legend is the key and
+   the per-performance aria-label still names the state for assistive tech. */
+.ttx-calendar__perf.is-available .ttx-calendar__perf-time { color: var(--ttx-available); }
+.ttx-calendar__perf.is-limited   .ttx-calendar__perf-time { color: var(--ttx-limited); }
+.ttx-calendar__perf.is-sold_out  .ttx-calendar__perf-time {
+    color: var(--ttx-soldout);
+    text-decoration: line-through;
+    text-decoration-thickness: 1px;
+}
+
+/* A buyable performance lifts + tints on hover/focus so it reads as clickable. */
+a.ttx-calendar__perf-link { cursor: pointer; transition: transform 0.12s ease, background-color 0.12s ease; }
+a.ttx-calendar__perf-link:hover { transform: translateY(-1px); background: var(--ttx-surface); }
+a.ttx-calendar__perf-link:focus-visible { outline: 2px solid var(--ttx-accent); outline-offset: 2px; }
+
+/* Past + today --------------------------------------------------------- */
+.ttx-calendar__day.is-past .ttx-calendar__perfs { opacity: 0.4; }
+.ttx-calendar__day.is-today .ttx-calendar__cell { box-shadow: inset 0 0 0 2px var(--ttx-accent); }
+
+.ttx-calendar__empty {
+    text-align: center;
+    color: var(--ttx-text-muted);
+    padding: 2rem 0;
+}
+
+/* Mobile performance selector -----------------------------------------------
+   Docked below the calendar; filled by view.js when a day is tapped. Rows are
+   stacked vertically (one performance per full-width row), never side by side.
+   Never shown on desktop or before a day is chosen. */
+.ttx-calendar__selector {
+    display: none;
+    margin-top: 1rem;
+    padding: 1rem;
+    border: 1px solid var(--ttx-border);
+    border-radius: var(--ttx-radius);
+    background: var(--ttx-surface);
+}
+
+.ttx-calendar__selector-date {
+    margin: 0 0 0.75rem;
+    font-size: 1.05rem;
+}
+
+.ttx-calendar__selector-date:focus-visible {
+    outline: 2px solid var(--ttx-accent);
+    outline-offset: 3px;
+}
+
+.ttx-calendar__selector-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.ttx-calendar__selector-row {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.6rem 0.75rem;
+    border: 1px solid var(--ttx-border);
+    border-left-width: 4px;
+    border-radius: var(--ttx-radius);
+    background: var(--ttx-surface-muted);
+}
+
+.ttx-calendar__selector-row.is-available { border-left-color: var(--ttx-available); }
+.ttx-calendar__selector-row.is-limited   { border-left-color: var(--ttx-limited); }
+.ttx-calendar__selector-row.is-sold_out  { border-left-color: var(--ttx-soldout); opacity: 0.8; }
+
+.ttx-calendar__selector-time {
+    font-weight: 700;
+    font-size: 1rem;
+}
+
+.ttx-calendar__selector-meta {
+    color: var(--ttx-text-muted);
+    font-size: 0.85rem;
+}
+
+.ttx-calendar__selector-row.is-limited  .ttx-calendar__selector-meta { color: var(--ttx-limited); }
+.ttx-calendar__selector-row.is-sold_out .ttx-calendar__selector-meta { color: var(--ttx-soldout); }
+
+.ttx-calendar__selector-buy {
+    margin-inline-start: auto;
+    flex: 0 0 auto;
+    padding: 0.45rem 0.9rem;
+    background: var(--ttx-accent);
+    color: var(--ttx-surface);
+    border-radius: var(--ttx-radius);
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 0.85rem;
+    white-space: nowrap;
+}
+
+.ttx-calendar__selector-buy:hover { opacity: 0.9; }
+.ttx-calendar__selector-buy:focus-visible { outline: 2px solid var(--ttx-accent); outline-offset: 2px; }
+
+/* Enhanced-mobile layout: only once view.js adds .ttx-calendar--enhanced, so a
+   no-JS phone keeps the (functional) inline times instead of dead day cells. */
+@media (max-width: 640px) {
+    .ttx-calendar--enhanced .ttx-calendar__perfs { display: none; }
+
+    .ttx-calendar--enhanced .ttx-calendar__daydot { display: block; }
+
+    .ttx-calendar--enhanced .ttx-calendar__cell {
+        align-items: center;
+        justify-content: center;
+        gap: 0.3rem;
+        text-align: center;
+    }
+
+    .ttx-calendar--enhanced [data-ttx-day] { cursor: pointer; }
+    .ttx-calendar--enhanced [data-ttx-day]:focus-visible {
+        outline: 2px solid var(--ttx-accent);
+        outline-offset: 2px;
+    }
+
+    .ttx-calendar--enhanced .ttx-calendar__day.is-selected .ttx-calendar__cell {
+        background: var(--ttx-surface);
+        box-shadow: inset 0 0 0 2px var(--ttx-accent);
+    }
+
+    .ttx-calendar--enhanced .ttx-calendar__selector:not([hidden]) { display: block; }
+}
+
+/* Screen-reader-only utility (used on the table caption). */
+.ttx-calendar__sr-only {
+    position: absolute !important;
+    inline-size: 1px;
+    block-size: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+/* Tighten weekday labels + state text on very small screens. */
+@media (max-width: 480px) {
+    .ttx-calendar__grid thead th { font-size: 0.6rem; }
+    .ttx-calendar__perf-link { padding-inline: 0.15rem; }
+}
+
+/* Honour reduced-motion. */
+@media (prefers-reduced-motion: reduce) {
+    a.ttx-calendar__perf-link,
+    .ttx-calendar__nav { transition: none; }
+    a.ttx-calendar__perf-link:hover { transform: none; }
+}

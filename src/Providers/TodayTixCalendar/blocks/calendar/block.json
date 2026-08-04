@@ -1,0 +1,31 @@
+{
+    "$schema": "https://schemas.wp.org/trunk/block.json",
+    "apiVersion": 3,
+    "name": "todaytix/calendar",
+    "title": "Ticket Calendar",
+    "category": "design",
+    "icon": "calendar-alt",
+    "description": "A month-by-month performance calendar showing live availability (available / limited / sold out) from the TodayTix feed. Server-rendered from cache; buy links open the white-label booking flow in a new tab.",
+    "keywords": ["calendar", "tickets", "availability", "todaytix", "performances"],
+    "supports": {
+        "html": false,
+        "anchor": true,
+        "align": ["wide", "full"],
+        "spacing": {
+            "margin": true,
+            "padding": true
+        }
+    },
+    "attributes": {
+        "heading": {
+            "type": "string",
+            "default": ""
+        },
+        "intro": {
+            "type": "string",
+            "default": ""
+        }
+    },
+    "textdomain": "todaytix-calendar",
+    "render": "file:./render.php"
+}

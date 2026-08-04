@@ -1,0 +1,117 @@
+{#
+    Ticket calendar — server-rendered from the cached run.
+
+    Accessibility notes:
+      - Each month is a <table> with a caption; days are <td>. State is conveyed by
+        TEXT (Available / Limited / Sold Out), never colour alone.
+      - Buyable days are real <a> links (work without JS); sold-out and past days are
+        inert <span>s that are still announced via aria-label.
+      - Every month after the first is `hidden`; view.js pages between them. With JS
+        off, all months render stacked and remain fully usable.
+#}
+<div {{ wrapper_attributes|raw }} data-ttx-calendar>
+    {% if heading %}
+        <h2 class="ttx-calendar__title">{{ heading }}</h2>
+    {% endif %}
+    {% if intro %}
+        <p class="ttx-calendar__intro">{{ intro }}</p>
+    {% endif %}
+    {% if price_from %}
+        <p class="ttx-calendar__price-from">Tickets from <strong>{{ price_from }}</strong></p>
+    {% endif %}
+
+    {% if months is empty %}
+        <p class="ttx-calendar__empty">{{ empty_message }}</p>
+    {% else %}
+        <ul class="ttx-calendar__legend">
+            <li class="ttx-calendar__legend-item is-available"><span class="ttx-calendar__swatch" aria-hidden="true"></span>Available</li>
+            <li class="ttx-calendar__legend-item is-limited"><span class="ttx-calendar__swatch" aria-hidden="true"></span>Limited</li>
+            <li class="ttx-calendar__legend-item is-sold_out"><span class="ttx-calendar__swatch" aria-hidden="true"></span>Sold Out</li>
+        </ul>
+
+        <div class="ttx-calendar__viewport">
+            {% for month in months %}
+                <section
+                    class="ttx-calendar__month"
+                    data-month-key="{{ month.key }}"
+                    role="group"
+                    aria-label="{{ month.label }}"
+                    {% if not month.isDefault %}hidden{% endif %}
+                >
+                    <header class="ttx-calendar__month-head">
+                        <button type="button" class="ttx-calendar__nav ttx-calendar__nav--prev" data-ttx-prev aria-label="Previous month"{% if loop.first %} disabled{% endif %}>
+                            <span aria-hidden="true">&lsaquo;</span>
+                        </button>
+                        <h3 class="ttx-calendar__month-label" tabindex="-1" aria-live="polite">{{ month.label }}</h3>
+                        <button type="button" class="ttx-calendar__nav ttx-calendar__nav--next" data-ttx-next aria-label="Next month"{% if loop.last %} disabled{% endif %}>
+                            <span aria-hidden="true">&rsaquo;</span>
+                        </button>
+                    </header>
+
+                    <table class="ttx-calendar__grid">
+                        <caption class="ttx-calendar__sr-only">{{ month.label }} performance availability</caption>
+                        <thead>
+                            <tr>
+                                {% for weekday in weekdays %}
+                                    <th scope="col"><abbr title="{{ weekday.full }}">{{ weekday.abbr }}</abbr></th>
+                                {% endfor %}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for week in month.weeks %}
+                                <tr>
+                                    {% for day in week %}
+                                        {% set classes = ['ttx-calendar__day'] %}
+                                        {% if not day.inMonth %}{% set classes = classes|merge(['is-outside']) %}{% endif %}
+                                        {% if day.isPast %}{% set classes = classes|merge(['is-past']) %}{% endif %}
+                                        {% if day.isToday %}{% set classes = classes|merge(['is-today']) %}{% endif %}
+                                        {% if day.stateSlug %}{% set classes = classes|merge(['is-' ~ day.stateSlug]) %}{% endif %}
+
+                                        <td class="{{ classes|join(' ') }}"{% if not day.inMonth %} aria-hidden="true"{% endif %}>
+                                            {% if day.inMonth %}
+                                                <div class="ttx-calendar__cell"{% if day.hasPerformances %} data-ttx-day data-day-label="{{ day.dateLabel }}"{% endif %}>
+                                                    <span class="ttx-calendar__daynum">{{ day.dayNumber }}</span>
+                                                    {% if day.hasPerformances %}
+                                                        <span class="ttx-calendar__daydot" aria-hidden="true"></span>
+                                                        <ul class="ttx-calendar__perfs">
+                                                            {% for perf in day.performances %}
+                                                                {% set perf_label = day.dateLabel ~ ' at ' ~ perf.time ~ ' — ' ~ perf.state_label ~ (perf.price ? ' — from ' ~ perf.price : '') %}
+                                                                <li class="ttx-calendar__perf is-{{ perf.state_slug }}"
+                                                                    data-time="{{ perf.time }}"
+                                                                    data-state="{{ perf.state_slug }}"
+                                                                    data-state-label="{{ perf.state_label }}"
+                                                                    {% if perf.price %}data-price="{{ perf.price }}"{% endif %}
+                                                                    {% if perf.buy_url %}data-buy-url="{{ perf.buy_url }}"{% endif %}>
+                                                                    {% if perf.buy_url %}
+                                                                        <a class="ttx-calendar__perf-link" href="{{ perf.buy_url }}" target="_blank" rel="noopener" title="{{ perf_label }}" aria-label="{{ perf_label }} — buy tickets (opens in a new tab)">
+                                                                            <span class="ttx-calendar__perf-time">{{ perf.time }}</span>
+                                                                        </a>
+                                                                    {% else %}
+                                                                        <span class="ttx-calendar__perf-link" title="{{ perf_label }}" aria-label="{{ perf_label }}">
+                                                                            <span class="ttx-calendar__perf-time">{{ perf.time }}</span>
+                                                                        </span>
+                                                                    {% endif %}
+                                                                </li>
+                                                            {% endfor %}
+                                                        </ul>
+                                                    {% endif %}
+                                                </div>
+                                            {% endif %}
+                                        </td>
+                                    {% endfor %}
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </section>
+            {% endfor %}
+        </div>
+
+        {#
+            Mobile performance selector. Populated by view.js when a day is tapped on
+            a narrow screen (progressive enhancement — hidden and unused on desktop
+            and when JS is off, where the inline per-day times remain the interface).
+        #}
+        <div class="ttx-calendar__selector" data-ttx-selector hidden></div>
+    {% endif %}
+</div>
