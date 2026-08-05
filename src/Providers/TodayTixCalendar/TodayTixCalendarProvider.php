@@ -105,4 +105,16 @@ final class TodayTixCalendarProvider extends Provider
             $this->enqueueDistScript('todaytix-calendar-view', 'js/calendar-view.js');
         }
     }
+
+    /**
+     * Editor-only: register the block on the client so the editor can render it
+     * (a ServerSideRender preview plus the heading/intro controls). Without this
+     * the editor reports "your site doesn't include support for this block". Hooked
+     * automatically by the BlockManager on 'enqueue_block_editor_assets'.
+     */
+    public function enqueueBlockEditorAssets(): void
+    {
+        $this->enqueueEditorScript('todaytix-calendar-block-editor', 'calendar.js', ['wp-server-side-render']);
+        $this->enqueueDistStyle('todaytix-calendar-block-editor', 'css/calendar-editor.css');
+    }
 }

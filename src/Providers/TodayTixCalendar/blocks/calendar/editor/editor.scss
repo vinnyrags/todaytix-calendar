@@ -1,0 +1,7 @@
+// Editor-only tweaks for todaytix/calendar. The front-end look comes from
+// ../style.scss (bundled into the editor build too); this file is for
+// canvas-context adjustments only.
+.wp-block-todaytix-calendar {
+    // The preview is a non-interactive ServerSideRender snapshot.
+    cursor: default;
+}
