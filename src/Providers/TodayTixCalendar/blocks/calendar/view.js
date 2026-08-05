@@ -68,6 +68,8 @@
     function setupSelector(root, panel, panelId, mq) {
         if (!panel) { return; }
 
+        var activeCell = null; // the day whose panel is open (for focus return on Escape)
+
         function applyMode() {
             if (mq.matches) {
                 markTriggers(root, panelId, true);
@@ -84,6 +86,7 @@
             clearSelection(root, panel);
             cell.setAttribute('aria-expanded', 'true');
             cell.closest('.ttx-calendar__day').classList.add('is-selected');
+            activeCell = cell;
 
             renderPanel(panel, cell);
             panel.hidden = false;
@@ -111,24 +114,44 @@
             }
         });
 
+        // Escape dismisses the open panel and returns focus to the day it came from.
+        root.addEventListener('keydown', function (event) {
+            if (event.key !== 'Escape' && event.key !== 'Esc') { return; }
+            if (!mq.matches || !panel || panel.hidden) { return; }
+            var returnTo = activeCell;
+            clearSelection(root, panel);
+            activeCell = null;
+            if (returnTo && typeof returnTo.focus === 'function') {
+                returnTo.focus({ preventScroll: false });
+            }
+        });
+
         addMediaListener(mq, applyMode);
         applyMode();
     }
 
     // Toggle the day cells between plain divs and keyboard-operable buttons.
+    // In button mode the performance list is visually collapsed (display:none), so
+    // it no longer contributes to the accessible name — we set an explicit aria-label
+    // (date + performance count) so a screen reader knows what the day holds and that
+    // activating it reveals the times. Desktop keeps the natural inline-link content.
     function markTriggers(root, panelId, on) {
         var cells = root.querySelectorAll('[data-ttx-day]');
         Array.prototype.forEach.call(cells, function (cell) {
             if (on) {
+                var count = cell.querySelectorAll('.ttx-calendar__perf').length;
+                var date = cell.getAttribute('data-day-label') || '';
                 cell.setAttribute('role', 'button');
                 cell.setAttribute('tabindex', '0');
                 cell.setAttribute('aria-controls', panelId);
                 cell.setAttribute('aria-expanded', 'false');
+                cell.setAttribute('aria-label', date + ', ' + count + ' performance' + (count === 1 ? '' : 's'));
             } else {
                 cell.removeAttribute('role');
                 cell.removeAttribute('tabindex');
                 cell.removeAttribute('aria-controls');
                 cell.removeAttribute('aria-expanded');
+                cell.removeAttribute('aria-label');
             }
         });
     }

@@ -9,9 +9,10 @@
       - Every month after the first is `hidden`; view.js pages between them. With JS
         off, all months render stacked and remain fully usable.
 #}
-<div {{ wrapper_attributes|raw }} data-ttx-calendar>
+<div {{ wrapper_attributes|raw }} data-ttx-calendar role="region"
+    {%- if heading %} aria-labelledby="{{ label_id }}"{% else %} aria-label="{{ region_label }}"{% endif %}>
     {% if heading %}
-        <h2 class="ttx-calendar__title">{{ heading }}</h2>
+        <h2 class="ttx-calendar__title" id="{{ label_id }}">{{ heading }}</h2>
     {% endif %}
     {% if intro %}
         <p class="ttx-calendar__intro">{{ intro }}</p>
@@ -44,7 +45,7 @@
                         <button type="button" class="ttx-calendar__nav ttx-calendar__nav--prev" data-ttx-prev aria-label="Previous month"{% if loop.first %} disabled{% endif %}>
                             <span aria-hidden="true">&lsaquo;</span>
                         </button>
-                        <h3 class="ttx-calendar__month-label" tabindex="-1" aria-live="polite">{{ month.label }}</h3>
+                        <h3 class="ttx-calendar__month-label" tabindex="-1">{{ month.label }}</h3>
                         <button type="button" class="ttx-calendar__nav ttx-calendar__nav--next" data-ttx-next aria-label="Next month"{% if loop.last %} disabled{% endif %}>
                             <span aria-hidden="true">&rsaquo;</span>
                         </button>

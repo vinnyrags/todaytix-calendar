@@ -16,13 +16,15 @@
     --ttx-surface-muted: #f5f5f4;
     --ttx-border: #e0ddd7;
     --ttx-text: #1c1b19;
-    --ttx-text-muted: #8a857c;
+    --ttx-text-muted: #706b63;  /* AA on white + muted grey (4.85 / 5.29) */
     --ttx-accent: #1c1b19;
 
-    /* State accents (paired with text labels — never the sole signal) */
-    --ttx-available: #2f7a4d;
+    /* State accents (paired with text labels — never the sole signal).
+       Text-bearing tokens are WCAG-AA (≥4.5:1) on both the white and muted-grey
+       cell backgrounds; a comp override MUST preserve that (see README). */
+    --ttx-available: #2f7a4d;   /* 4.80 / 5.23 */
     --ttx-available-bg: #eaf4ee;
-    --ttx-limited: #a86a12;
+    --ttx-limited: #96600f;     /* 4.84 / 5.28 */
     --ttx-limited-bg: #fbf1e0;
     --ttx-soldout: #9a2f2f;
     --ttx-soldout-bg: #f6ebeb;
@@ -392,4 +394,20 @@ a.ttx-calendar__perf-link:focus-visible { outline: 2px solid var(--ttx-accent); 
     a.ttx-calendar__perf-link,
     .ttx-calendar__nav { transition: none; }
     a.ttx-calendar__perf-link:hover { transform: none; }
+}
+
+/* Windows High Contrast / forced-colors: box-shadows and background tints are
+   dropped by the OS, so re-express "today" and the selected day as outlines and
+   keep every control's edge visible. State is text-backed, so no info is lost. */
+@media (forced-colors: active) {
+    .ttx-calendar__nav,
+    .ttx-calendar__selector-row,
+    .ttx-calendar__selector-buy { border: 1px solid CanvasText; }
+
+    .ttx-calendar__day.is-today .ttx-calendar__cell { outline: 2px solid CanvasText; outline-offset: -2px; }
+
+    .ttx-calendar--enhanced .ttx-calendar__day.is-selected .ttx-calendar__cell {
+        outline: 2px solid Highlight;
+        outline-offset: -2px;
+    }
 }

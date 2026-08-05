@@ -57,5 +57,10 @@ $context['weekdays'] = $weekdays;
 $context['price_from'] = $priceFrom;
 $context['legend_items'] = $legendItems;
 $context['empty_message'] = __('Performance dates will appear here once they go on sale.', 'todaytix-calendar');
+// The region landmark's accessible name: the block heading when present (via
+// aria-labelledby), otherwise a generic fallback. wp_unique_id keeps the id
+// distinct when more than one calendar renders on a page.
+$context['label_id']     = wp_unique_id('ttx-calendar-title-');
+$context['region_label'] = __('Performance calendar', 'todaytix-calendar');
 
 Timber::render(__DIR__ . '/calendar.twig', $context);
