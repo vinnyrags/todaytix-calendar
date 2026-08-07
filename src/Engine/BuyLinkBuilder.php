@@ -11,21 +11,22 @@ namespace TodayTixCalendar\Engine;
  * substituted per performance:
  *
  *   {show_id}       the TodayTix show id            e.g. 46495
- *   {showtime_id}   the TodayTix showtime id        e.g. 2511756
+ *   {showtime_id}   the TodayTix showtime id        e.g. 2502992
  *   {month}         the performance month, Y-m      e.g. 2026-12
- *   {date}          the performance date, Y-m-d     e.g. 2026-12-10
+ *   {date}          the performance date, Y-m-d     e.g. 2026-12-21
+ *   {time}          the performance time, H:i       e.g. 19:00
  *
- * ── Per-performance deep link (planned) ──────────────────────────────────────
- * The DEFAULT template is the CONFIRMED month-calendar route:
- *   /booking/calendar/{show_id}/{month}
- * The white-label booking site is a client-rendered Next.js SPA, so the exact
- * per-showtime route (expected to be something like /booking/showtime/{showtime_id})
- * still needs a quick in-browser confirmation. Because the route is a *template*,
- * switching to the true deep link is a CONFIG change — set `buy_path_template` in
- * the theme's `todaytix_calendar/config` filter (or a CMS field) to e.g.
- *   '/booking/showtime/{showtime_id}'
- * — no package code changes. Until then the month route is the safe placeholder
- * (it never 404s on a stale showtime id).
+ * ── Per-performance deep link ────────────────────────────────────────────────
+ * The DEFAULT template is the month-calendar route (/booking/calendar/{show_id}/{month}),
+ * a safe placeholder that never 404s on a stale showtime id. The confirmed
+ * per-performance route is the white-label seating-plan step — the feed's showtime
+ * id IS the white-label showtime_id (verified: 2026-12-21 19:00 = feed id 2502992) —
+ * so switching to it is a CONFIG change (set `buy_path_template` in the theme's
+ * `todaytix_calendar/config` filter / CMS field), e.g.:
+ *   /booking/seating-plan?product_id={show_id}&content_product_id={show_id}
+ *     &venue_id=6555&product_type=show&qt=2&showtime_id={showtime_id}&slot={time}&date={date}
+ * (venue_id and qt are per-show literals; slot is the performance time). No package
+ * change is needed — the template just references the tokens above.
  */
 final class BuyLinkBuilder
 {
@@ -51,6 +52,7 @@ final class BuyLinkBuilder
             '{showtime_id}' => (string) $showtime->id,
             '{month}'       => $showtime->datetime->format('Y-m'),
             '{date}'        => $showtime->datetime->format('Y-m-d'),
+            '{time}'        => $showtime->datetime->format('H:i'),
         ]);
 
         return rtrim($this->baseUrl, '/') . '/' . ltrim($path, '/');

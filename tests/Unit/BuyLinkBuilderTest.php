@@ -64,11 +64,30 @@ final class BuyLinkBuilderTest extends TestCase
 
     public function testTemplateSubstitutesAllTokens(): void
     {
-        $builder = new BuyLinkBuilder('https://x.test', 46495, '/{show_id}/{date}/{month}/{showtime_id}');
+        $builder = new BuyLinkBuilder('https://x.test', 46495, '/{show_id}/{date}/{month}/{showtime_id}/{time}');
 
         self::assertSame(
-            'https://x.test/46495/2026-12-10/2026-12/2511756',
+            'https://x.test/46495/2026-12-10/2026-12/2511756/19:30',
             $builder->forShowtime($this->showtime(Availability::LIMITED)),
+        );
+    }
+
+    public function testBuildsTheSeatingPlanDeepLink(): void
+    {
+        // Marc's confirmed per-performance route (2026-08-07): feed showtime id IS
+        // the white-label showtime_id; slot is the performance time.
+        $builder = new BuyLinkBuilder(
+            'https://tickets.viewfromthebridgeplay.com',
+            46495,
+            '/booking/seating-plan?product_id={show_id}&content_product_id={show_id}'
+                . '&venue_id=6555&product_type=show&qt=2&showtime_id={showtime_id}&slot={time}&date={date}',
+        );
+
+        self::assertSame(
+            'https://tickets.viewfromthebridgeplay.com/booking/seating-plan?product_id=46495'
+                . '&content_product_id=46495&venue_id=6555&product_type=show&qt=2'
+                . '&showtime_id=2511756&slot=19:30&date=2026-12-10',
+            $builder->forShowtime($this->showtime(Availability::AVAILABLE)),
         );
     }
 }

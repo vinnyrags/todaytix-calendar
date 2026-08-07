@@ -249,7 +249,8 @@
    gets NO highlight — a plain, still-clickable date. */
 .ttx-calendar__perf.is-available .ttx-calendar__perf-time { color: var(--ttx-available); }
 .ttx-calendar__perf.is-limited   .ttx-calendar__perf-time { color: var(--ttx-limited); }
-.ttx-calendar__perf.is-sold_out  .ttx-calendar__perf-time { color: var(--ttx-text); }
+// Sold-out: listed but greyed and non-interactive (renders as a <span>, not a link).
+.ttx-calendar__perf.is-sold_out  .ttx-calendar__perf-time { color: var(--ttx-text-muted); }
 
 /* A buyable performance lifts + tints on hover/focus so it reads as clickable. */
 a.ttx-calendar__perf-link { cursor: pointer; transition: transform 0.12s ease, background-color 0.12s ease; }

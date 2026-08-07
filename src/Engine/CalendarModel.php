@@ -40,6 +40,7 @@ final class CalendarModel
         private readonly int $weekStartsOn = 0,
         private readonly array $stateLabels = [],
         private readonly array $buyableStates = ['available', 'limited'],
+        private readonly bool $showPrice = true,
     ) {}
 
     /**
@@ -205,7 +206,7 @@ final class CalendarModel
                 'time'        => $showtime->timeLabelShort(),
                 'state_slug'  => $slug,
                 'state_label' => $this->stateLabels[$slug] ?? $showtime->availability->label(),
-                'price'       => $showtime->priceDisplay,
+                'price'       => $this->showPrice ? $showtime->priceDisplay : null,
                 'buy_url'     => $buyable ? $this->buyLinks->forShowtime($showtime) : null,
             ];
         }

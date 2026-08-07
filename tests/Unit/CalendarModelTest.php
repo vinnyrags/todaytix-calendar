@@ -269,4 +269,14 @@ final class CalendarModelTest extends TestCase
 
         self::assertSame('$89', $dec20->performances[0]['price']);
     }
+
+    public function testPriceIsOmittedWhenShowPriceIsOff(): void
+    {
+        // Marc's call for View — no price on the calendar (reversible via config).
+        $run   = [new Showtime(1, $this->dt('2026-12-20 19:30'), Availability::AVAILABLE, 100, '$89', 89)];
+        $model = new CalendarModel($this->et, $this->dt('2026-12-01'), new BuyLinkBuilder('https://x.test', 1), 0, [], ['available', 'limited'], false);
+        $dec20 = $this->findDay($model->build($run, $this->dt('2026-12-01'), $this->dt('2026-12-01'))[0], '2026-12-20');
+
+        self::assertNull($dec20->performances[0]['price']);
+    }
 }

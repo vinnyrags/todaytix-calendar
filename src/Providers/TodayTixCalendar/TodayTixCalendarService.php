@@ -87,6 +87,7 @@ final class TodayTixCalendarService
             (int) $config['week_starts_on'],
             is_array($config['state_labels']) ? $config['state_labels'] : [],
             is_array($config['buyable_states']) ? $config['buyable_states'] : ['available', 'limited'],
+            (bool) ($config['show_price'] ?? false),
         );
 
         [$start, $end] = $this->renderRange($config, $run, $timezone);
@@ -126,6 +127,10 @@ final class TodayTixCalendarService
      */
     public function getPriceFrom(): ?string
     {
+        if (!($this->config()['show_price'] ?? false)) {
+            return null; // price display is off (Marc's call for View — reversible via config)
+        }
+
         $lowest = null;
         foreach ($this->resolvedRun() as $showtime) {
             if (!$showtime->availability->isBuyable() || $showtime->priceValue === null) {
@@ -375,6 +380,9 @@ final class TodayTixCalendarService
             // Available→"Best Availability" and keep sold-out clickable.
             'state_labels'      => [],
             'buyable_states'    => ['available', 'limited'],
+            // Whether to show prices ("Tickets from $X" + per-performance). Off by
+            // default — View doesn't surface price on desktop; flip on per show.
+            'show_price'        => false,
             // ACF hub group to attach the "Ticket Calendar" tab to. Empty = no tab,
             // so the package stays config-filter-only + portable; a consuming site
             // supplies its Settings-Hub group key here to get the CMS surface.
