@@ -6,9 +6,9 @@
  * Pulls the cached, resolved month grids from the service (never the API) and hands
  * them to Timber. All availability logic already happened in the engine/service — the
  * template is pure presentation. Identical markup ships to the editor via
- * ServerSideRender so authors preview exactly what the front end shows.
- *
- * @var array<string,mixed> $attributes Block attributes (heading, intro).
+ * ServerSideRender so authors preview exactly what the front end shows. The block
+ * has no attributes of its own — heading/intro copy is composed around it with
+ * core/heading + core/paragraph in the CMS.
  */
 
 use IX\Theme;
@@ -50,17 +50,13 @@ $weekdays = [
 
 $context = Timber::context();
 $context['wrapper_attributes'] = get_block_wrapper_attributes(['class' => 'ttx-calendar']);
-$context['heading']  = isset($attributes['heading']) ? trim((string) $attributes['heading']) : '';
-$context['intro']    = isset($attributes['intro']) ? trim((string) $attributes['intro']) : '';
 $context['months']   = $months;
 $context['weekdays'] = $weekdays;
 $context['price_from'] = $priceFrom;
 $context['legend_items'] = $legendItems;
 $context['empty_message'] = __('Performance dates will appear here once they go on sale.', 'todaytix-calendar');
-// The region landmark's accessible name: the block heading when present (via
-// aria-labelledby), otherwise a generic fallback. wp_unique_id keeps the id
-// distinct when more than one calendar renders on a page.
-$context['label_id']     = wp_unique_id('ttx-calendar-title-');
+// Any heading/intro copy is composed around the block with core/heading +
+// core/paragraph in the CMS; the block itself is just the calendar.
 $context['region_label'] = __('Performance calendar', 'todaytix-calendar');
 
 Timber::render(__DIR__ . '/calendar.twig', $context);

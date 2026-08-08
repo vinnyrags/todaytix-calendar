@@ -9,14 +9,7 @@
       - Every month after the first is `hidden`; view.js pages between them. With JS
         off, all months render stacked and remain fully usable.
 #}
-<div {{ wrapper_attributes|raw }} data-ttx-calendar role="region"
-    {%- if heading %} aria-labelledby="{{ label_id }}"{% else %} aria-label="{{ region_label }}"{% endif %}>
-    {% if heading %}
-        <h2 class="ttx-calendar__title" id="{{ label_id }}">{{ heading }}</h2>
-    {% endif %}
-    {% if intro %}
-        <p class="ttx-calendar__intro">{{ intro }}</p>
-    {% endif %}
+<div {{ wrapper_attributes|raw }} data-ttx-calendar role="region" aria-label="{{ region_label }}">
     {% if price_from %}
         <p class="ttx-calendar__price-from">Tickets from <strong>{{ price_from }}</strong></p>
     {% endif %}
@@ -24,14 +17,6 @@
     {% if months is empty %}
         <p class="ttx-calendar__empty">{{ empty_message }}</p>
     {% else %}
-        {% if legend_items %}
-            <ul class="ttx-calendar__legend">
-                {% for item in legend_items %}
-                    <li class="ttx-calendar__legend-item is-{{ item.slug }}"><span class="ttx-calendar__swatch" aria-hidden="true"></span>{{ item.label }}</li>
-                {% endfor %}
-            </ul>
-        {% endif %}
-
         <div class="ttx-calendar__viewport">
             {% for month in months %}
                 <section
@@ -61,6 +46,17 @@
                             </tr>
                         </thead>
                         <tbody>
+                            {% if legend_items %}
+                                <tr class="ttx-calendar__legend-row">
+                                    <td colspan="7">
+                                        <ul class="ttx-calendar__legend">
+                                            {% for item in legend_items %}
+                                                <li class="ttx-calendar__legend-item is-{{ item.slug }}"><span class="ttx-calendar__swatch" aria-hidden="true"></span>{{ item.label }}</li>
+                                            {% endfor %}
+                                        </ul>
+                                    </td>
+                                </tr>
+                            {% endif %}
                             {% for week in month.weeks %}
                                 <tr>
                                     {% for day in week %}

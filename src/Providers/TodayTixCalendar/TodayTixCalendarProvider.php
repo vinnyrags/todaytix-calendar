@@ -81,16 +81,23 @@ final class TodayTixCalendarProvider extends Provider
             ));
         };
 
+        // Toggle labels track the site's configured display labels so the admin
+        // matches the front end (e.g. View shows "Best Availability" / "Selling
+        // Fast"); a site with no custom labels falls back to the feed's own names.
+        $labels     = is_array($config['state_labels'] ?? null) ? $config['state_labels'] : [];
+        $toggleLabel = static fn (string $slug, string $fallback): string
+            => 'Show “' . (($labels[$slug] ?? '') !== '' ? $labels[$slug] : $fallback) . '”';
+
+        // This iteration exposes only the editorial control — which availability
+        // states appear. Everything else (show id, booking URL, run window,
+        // per-performance deep link) is developer/build-time config supplied in
+        // code via the `todaytix_calendar/config` filter, so it stays version-
+        // controlled rather than in the DB. Add fields back here if a future site
+        // needs to configure those from the CMS.
         $add('tab', $order, ['label' => 'Ticket Calendar', 'name' => '', 'type' => 'tab', 'placement' => 'top']);
-        $add('show_id', $order + 1, ['label' => 'TodayTix Show ID', 'name' => 'todaytix_show_id', 'type' => 'number', 'wrapper' => ['width' => '50'], 'instructions' => "The show's TodayTix id (e.g. 46495). Overrides the code default when set."]);
-        $add('base_url', $order + 2, ['label' => 'White-label Booking URL', 'name' => 'todaytix_base_url', 'type' => 'url', 'wrapper' => ['width' => '50'], 'instructions' => 'e.g. https://tickets.viewfromthebridgeplay.com — where the Buy buttons point.']);
-        $add('run_start', $order + 3, ['label' => 'Run Start', 'name' => 'todaytix_run_start', 'type' => 'date_picker', 'wrapper' => ['width' => '33.33333'], 'display_format' => 'F j, Y', 'return_format' => 'Y-m-d', 'first_day' => 0, 'instructions' => 'First month the calendar shows. Blank = derive from the feed.']);
-        $add('run_end', $order + 4, ['label' => 'Run End', 'name' => 'todaytix_run_end', 'type' => 'date_picker', 'wrapper' => ['width' => '33.33333'], 'display_format' => 'F j, Y', 'return_format' => 'Y-m-d', 'first_day' => 0, 'instructions' => 'Last month the calendar shows. Blank = derive from the feed.']);
-        $add('week_starts_on', $order + 5, ['label' => 'Week Starts On', 'name' => 'todaytix_week_starts_on', 'type' => 'select', 'wrapper' => ['width' => '33.33333'], 'choices' => [0 => 'Sunday', 1 => 'Monday'], 'default_value' => 0, 'instructions' => 'The grid’s first column — usually Sunday.']);
-        $add('show_available', $order + 7, ['label' => 'Show “Available”', 'name' => 'todaytix_show_available', 'type' => 'true_false', 'ui' => 1, 'default_value' => 1, 'wrapper' => ['width' => '33.33333'], 'instructions' => 'Performances with good availability (shown to visitors as “Best Availability”). Turn off to hide them from the calendar.']);
-        $add('show_limited', $order + 8, ['label' => 'Show “Limited”', 'name' => 'todaytix_show_limited', 'type' => 'true_false', 'ui' => 1, 'default_value' => 1, 'wrapper' => ['width' => '33.33333'], 'instructions' => 'Performances with only a few tickets left (shown as “Limited Availability”). Turn off to hide them from the calendar.']);
-        $add('show_sold_out', $order + 9, ['label' => 'Show “Sold Out”', 'name' => 'todaytix_show_sold_out', 'type' => 'true_false', 'ui' => 1, 'default_value' => 1, 'wrapper' => ['width' => '33.33333'], 'instructions' => 'Performances with no inventory left. On View they stay clickable and unlabeled. Turn off to hide them.']);
-        $add('buy_path_template', $order + 10, ['label' => 'Buy-link route (advanced)', 'name' => 'todaytix_buy_path_template', 'type' => 'text', 'instructions' => 'Sets where the Buy buttons link — the path added after the Booking URL above. Leave blank (recommended): visitors land on the month booking calendar and pick their showtime there. Advanced — paste a path to target something more specific, using these tokens (filled in per performance): {show_id}, {showtime_id}, {month}, {date}. Example: /booking/showtime/{showtime_id}']);
+        $add('show_available', $order + 1, ['label' => $toggleLabel('available', 'Available'), 'name' => 'todaytix_show_available', 'type' => 'true_false', 'ui' => 1, 'default_value' => 1, 'wrapper' => ['width' => '33.33333'], 'instructions' => 'Show performances with good availability. Turn off to hide them from the calendar.']);
+        $add('show_limited', $order + 2, ['label' => $toggleLabel('limited', 'Limited'), 'name' => 'todaytix_show_limited', 'type' => 'true_false', 'ui' => 1, 'default_value' => 1, 'wrapper' => ['width' => '33.33333'], 'instructions' => 'Show performances with only a few tickets left. Turn off to hide them from the calendar.']);
+        $add('show_sold_out', $order + 3, ['label' => $toggleLabel('sold_out', 'Sold Out'), 'name' => 'todaytix_show_sold_out', 'type' => 'true_false', 'ui' => 1, 'default_value' => 1, 'wrapper' => ['width' => '33.33333'], 'instructions' => 'Show performances with no inventory left. Turn off to hide them from the calendar.']);
     }
 
     /**

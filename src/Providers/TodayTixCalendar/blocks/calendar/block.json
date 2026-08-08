@@ -16,16 +16,6 @@
             "padding": true
         }
     },
-    "attributes": {
-        "heading": {
-            "type": "string",
-            "default": ""
-        },
-        "intro": {
-            "type": "string",
-            "default": ""
-        }
-    },
     "textdomain": "todaytix-calendar",
     "render": "file:./render.php"
 }

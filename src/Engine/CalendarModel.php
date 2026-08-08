@@ -41,6 +41,7 @@ final class CalendarModel
         private readonly array $stateLabels = [],
         private readonly array $buyableStates = ['available', 'limited'],
         private readonly bool $showPrice = true,
+        private readonly string $timeFormat = '',
     ) {}
 
     /**
@@ -203,7 +204,7 @@ final class CalendarModel
 
             $cells[] = [
                 'id'          => $showtime->id,
-                'time'        => $showtime->timeLabelShort(),
+                'time'        => $this->timeFormat !== '' ? $showtime->datetime->format($this->timeFormat) : $showtime->timeLabelShort(),
                 'state_slug'  => $slug,
                 'state_label' => $this->stateLabels[$slug] ?? $showtime->availability->label(),
                 'price'       => $this->showPrice ? $showtime->priceDisplay : null,

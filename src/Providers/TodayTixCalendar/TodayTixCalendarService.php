@@ -88,6 +88,7 @@ final class TodayTixCalendarService
             is_array($config['state_labels']) ? $config['state_labels'] : [],
             is_array($config['buyable_states']) ? $config['buyable_states'] : ['available', 'limited'],
             (bool) ($config['show_price'] ?? false),
+            (string) ($config['time_format'] ?? ''),
         );
 
         [$start, $end] = $this->renderRange($config, $run, $timezone);
@@ -383,6 +384,9 @@ final class TodayTixCalendarService
             // Whether to show prices ("Tickets from $X" + per-performance). Off by
             // default — View doesn't surface price on desktop; flip on per show.
             'show_price'        => false,
+            // Per-performance time format (PHP date()). Empty = the built-in short
+            // label ("2 PM" / "7:30 PM"); set e.g. 'g:i' for "2:00" / "7:30".
+            'time_format'       => '',
             // ACF hub group to attach the "Ticket Calendar" tab to. Empty = no tab,
             // so the package stays config-filter-only + portable; a consuming site
             // supplies its Settings-Hub group key here to get the CMS surface.
@@ -410,21 +414,6 @@ final class TodayTixCalendarService
     private function cmsConfig(): array
     {
         $out = [];
-        $text = [
-            'show_id'           => 'todaytix_show_id',
-            'base_url'          => 'todaytix_base_url',
-            'run_start'         => 'todaytix_run_start',
-            'run_end'           => 'todaytix_run_end',
-            'week_starts_on'    => 'todaytix_week_starts_on',
-            'buy_path_template' => 'todaytix_buy_path_template',
-        ];
-        foreach ($text as $key => $field) {
-            $val = get_field($field, 'option');
-            if ($val === null || $val === '' || $val === false) {
-                continue;
-            }
-            $out[$key] = in_array($key, ['show_id', 'week_starts_on'], true) ? (int) $val : (string) $val;
-        }
 
         // Status toggles → visible_states. Unset (never saved) counts as ON.
         $states = [];
