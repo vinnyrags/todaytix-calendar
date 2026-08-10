@@ -123,7 +123,6 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    font-size: 1.5rem;
     line-height: 1;
     background: var(--ttx-surface);
     color: var(--ttx-text);
@@ -131,6 +130,17 @@
     border-radius: var(--ttx-radius);
     cursor: pointer;
     transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+/* The chevron is a real inline <svg> (see calendar.twig) — vector, so it stays
+   crisp and geometrically centred on every engine (unlike a text glyph, which
+   sits high on its line box, or a CSS-drawn shape). stroke="currentColor" in the
+   markup means it inherits the button colour, including hover. */
+.ttx-calendar__nav-icon {
+    inline-size: 0.9rem;
+    block-size: 0.9rem;
+    width: 0.9rem;
+    height: 0.9rem;
 }
 
 .ttx-calendar__nav:hover:not(:disabled) {
