@@ -289,4 +289,37 @@ final class CalendarModelTest extends TestCase
 
         self::assertNull($dec20->performances[0]['price']);
     }
+
+    public function testOpeningMonthSkipsAFullySoldOutEarlyMonthButKeepsItNavigable(): void
+    {
+        // "now" before the run. November is entirely sold out (early previews);
+        // December is where tickets can actually be bought.
+        $run = [
+            $this->showtime(1, '2026-11-27 19:30', Availability::SOLD_OUT),
+            $this->showtime(2, '2026-11-28 19:30', Availability::SOLD_OUT),
+            $this->showtime(3, '2026-12-15 19:00', Availability::AVAILABLE),
+            $this->showtime(4, '2026-12-20 19:30', Availability::LIMITED),
+        ];
+        $model  = new CalendarModel($this->et, $this->dt('2026-08-01 10:00'), new BuyLinkBuilder('https://x.test', 1));
+        $months = $model->build($run, $this->dt('2026-11-01'), $this->dt('2026-12-31'));
+
+        // Opens on December (the first month with buyable inventory)…
+        self::assertSame('2026-12', $this->defaultMonth($months)->key());
+        // …but November is still rendered, so the prev arrow can reach it.
+        $keys = array_map(static fn (CalendarMonth $m): string => $m->key(), $months);
+        self::assertContains('2026-11', $keys, 'the sold-out early month stays navigable');
+    }
+
+    public function testOpeningMonthFallsBackToFloorWhenWholeRunIsSoldOut(): void
+    {
+        // Nothing buyable anywhere — open on the navigable floor rather than nowhere.
+        $run = [
+            $this->showtime(1, '2026-11-27 19:30', Availability::SOLD_OUT),
+            $this->showtime(2, '2026-12-15 19:00', Availability::SOLD_OUT),
+        ];
+        $model  = new CalendarModel($this->et, $this->dt('2026-08-01 10:00'), new BuyLinkBuilder('https://x.test', 1));
+        $months = $model->build($run, $this->dt('2026-11-01'), $this->dt('2026-12-31'));
+
+        self::assertSame('2026-11', $this->defaultMonth($months)->key());
+    }
 }

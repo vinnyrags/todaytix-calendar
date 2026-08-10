@@ -75,10 +75,18 @@ final class CalendarModel
             return [];
         }
 
-        $keys           = array_map(static fn (DateTimeImmutable $d): string => $d->format('Y-m'), $monthStarts);
-        $monthsWithPerf = [];
-        foreach (array_keys($byDate) as $date) {
-            $monthsWithPerf[substr((string) $date, 0, 7)] = true;
+        $keys              = array_map(static fn (DateTimeImmutable $d): string => $d->format('Y-m'), $monthStarts);
+        $monthsWithPerf    = [];
+        $monthsWithBuyable = [];
+        foreach ($byDate as $date => $list) {
+            $monthKey = substr((string) $date, 0, 7);
+            $monthsWithPerf[$monthKey] = true;
+            foreach ($list as $showtime) {
+                if (in_array($showtime->availability->value, $this->buyableStates, true)) {
+                    $monthsWithBuyable[$monthKey] = true;
+                    break;
+                }
+            }
         }
 
         // Only months that actually hold performances anchor the navigable window.
@@ -93,32 +101,34 @@ final class CalendarModel
         // leading months (before tickets go on sale, or already past) and empty
         // trailing months are not navigable — you can't page back to an empty
         // November when the run doesn't really begin until December.
-        $defaultKey = $this->resolveDefaultMonth($keys, $monthsWithPerf, $today);
+        $floorKey   = $this->resolveFloorMonth($keys, $monthsWithPerf, $today);
         $endKey     = max($perfKeys);
+        $openingKey = $this->resolveOpeningMonth($keys, $monthsWithBuyable, $floorKey, $endKey);
 
         $months = [];
         foreach ($monthStarts as $firstOfMonth) {
             $key = $firstOfMonth->format('Y-m');
-            if ($key < $defaultKey || $key > $endKey) {
+            if ($key < $floorKey || $key > $endKey) {
                 continue;
             }
-            $months[] = $this->buildMonth($firstOfMonth, $byDate, $today, $key === $defaultKey);
+            $months[] = $this->buildMonth($firstOfMonth, $byDate, $today, $key === $openingKey);
         }
 
         return $months;
     }
 
     /**
-     * The first navigable month: the first month that is not in the past AND has
+     * The navigable floor: the first month that is not in the past AND has
      * performances; failing that, the first month with performances at all. Callers
      * guarantee at least one month has performances, so this always resolves to a
-     * real performance month — which becomes both the opening month and the floor
-     * for backward paging.
+     * real performance month. It's the floor for backward paging (the earliest month
+     * the prev arrow reaches) — the opening month can sit later (see
+     * {@see resolveOpeningMonth()}), but never earlier.
      *
      * @param string[]              $keys           Month keys (Y-m), in order.
      * @param array<string,bool>    $monthsWithPerf Keys that hold performances.
      */
-    private function resolveDefaultMonth(array $keys, array $monthsWithPerf, DateTimeImmutable $today): string
+    private function resolveFloorMonth(array $keys, array $monthsWithPerf, DateTimeImmutable $today): string
     {
         $currentKey = $today->format('Y-m');
 
@@ -134,6 +144,31 @@ final class CalendarModel
         }
 
         return $keys[0];
+    }
+
+    /**
+     * The opening month: the first navigable month (floor…end) that still has a
+     * buyable performance, so the calendar lands where tickets can actually be
+     * bought and skips a fully sold-out early run — those months stay rendered and
+     * reachable via the prev arrow, they just aren't the default view. Self-healing:
+     * as each month sells out the opening view advances on its own, with no hardcoded
+     * date. Falls back to the floor when the whole run is sold out (nothing buyable).
+     *
+     * @param string[]           $keys              Month keys (Y-m), in order.
+     * @param array<string,bool> $monthsWithBuyable Keys with a buyable performance.
+     */
+    private function resolveOpeningMonth(array $keys, array $monthsWithBuyable, string $floorKey, string $endKey): string
+    {
+        foreach ($keys as $key) {
+            if ($key < $floorKey || $key > $endKey) {
+                continue;
+            }
+            if (isset($monthsWithBuyable[$key])) {
+                return $key;
+            }
+        }
+
+        return $floorKey;
     }
 
     /**
