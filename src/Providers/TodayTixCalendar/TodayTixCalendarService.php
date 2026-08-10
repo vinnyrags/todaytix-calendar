@@ -177,6 +177,7 @@ final class TodayTixCalendarService
         }
 
         $canonical = SoldOutResolver::mergeCanonical($this->canonical($timezone), $feed);
+        $canonical = $this->applySoldOutSeed($canonical, $feed, $timezone, $config);
         $this->storeCanonical($canonical);
 
         $run        = (new SoldOutResolver())->resolve($canonical, $feed);
@@ -292,6 +293,37 @@ final class TodayTixCalendarService
         return $refs;
     }
 
+    /**
+     * Parse the configured `sold_out_seed` local datetime strings into the show
+     * timezone and merge them into the canonical schedule via {@see
+     * SoldOutResolver::seedSoldOut()} (where the real, testable logic lives). Thin
+     * WP-glue: config parsing here, set reconciliation in the engine.
+     *
+     * @param PerformanceRef[]     $canonical
+     * @param Showtime[]           $feed
+     * @param array<string, mixed> $config
+     *
+     * @return PerformanceRef[]
+     */
+    private function applySoldOutSeed(array $canonical, array $feed, DateTimeZone $tz, array $config): array
+    {
+        $raw = is_array($config['sold_out_seed'] ?? null) ? $config['sold_out_seed'] : [];
+        if ($raw === []) {
+            return $canonical;
+        }
+
+        $seed = [];
+        foreach ($raw as $value) {
+            try {
+                $seed[] = new DateTimeImmutable((string) $value, $tz);
+            } catch (\Exception $e) {
+                // Skip an unparseable seed entry rather than fatal on a config typo.
+            }
+        }
+
+        return SoldOutResolver::seedSoldOut($canonical, $feed, $seed);
+    }
+
     /** @param PerformanceRef[] $canonical */
     private function storeCanonical(array $canonical): void
     {
@@ -387,6 +419,13 @@ final class TodayTixCalendarService
             // Per-performance time format (PHP date()). Empty = the built-in short
             // label ("2 PM" / "7:30 PM"); set e.g. 'g:i' for "2:00" / "7:30".
             'time_format'       => '',
+            // Performances known to exist but that will never appear in the live
+            // feed — typically an early run that sold out before we started polling,
+            // so no TodayTix id was ever captured for them. Each entry is a local
+            // datetime string ('Y-m-d H:i', show timezone). They're seeded into the
+            // canonical schedule with synthetic ids and always resolve SOLD_OUT (a
+            // seed slot the feed later carries is dropped, so the live entry wins).
+            'sold_out_seed'     => [],
             // ACF hub group to attach the "Ticket Calendar" tab to. Empty = no tab,
             // so the package stays config-filter-only + portable; a consuming site
             // supplies its Settings-Hub group key here to get the CMS surface.

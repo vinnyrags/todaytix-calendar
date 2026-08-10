@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace TodayTixCalendar\Engine;
 
+use DateTimeImmutable;
+
 /**
  * Reconciles the durable canonical schedule against the live feed to detect sold-out.
  *
@@ -89,5 +91,56 @@ final class SoldOutResolver
             => $a->datetime <=> $b->datetime);
 
         return $refs;
+    }
+
+    /**
+     * Merge "seed" performances — ones known to exist but that will never appear in
+     * the feed (an early run that sold out before polling began, so no id was ever
+     * captured) — into the canonical set, so {@see resolve()} reports them SOLD_OUT.
+     *
+     * Self-healing and idempotent: any prior synthetic seed ref (negative id) is
+     * stripped first, then a fresh synthetic ref is added only for a seed slot the
+     * real canonical / live feed don't already cover. So a seeded slot the feed later
+     * carries is dropped here and its live entry wins — no phantom sold-out lingers.
+     *
+     * Slot identity is the local 'Y-m-d H:i' (matinee vs evening stay distinct);
+     * synthetic ids are derived from the datetime (negative, so they can never
+     * collide with TodayTix's positive ids). Pure logic — the caller supplies seed
+     * datetimes already normalized to the show timezone.
+     *
+     * @param PerformanceRef[]    $canonical Real canonical (may include prior seeds).
+     * @param Showtime[]          $feed      The live feed just fetched.
+     * @param DateTimeImmutable[] $seed      Seed datetimes (in the show timezone).
+     *
+     * @return PerformanceRef[] The seeded canonical set, sorted chronologically.
+     */
+    public static function seedSoldOut(array $canonical, array $feed, array $seed): array
+    {
+        $slot = static fn (DateTimeImmutable $dt): string => $dt->format('Y-m-d H:i');
+
+        // Drop prior synthetic seed refs; the real canonical + feed are the authority.
+        $canonical = array_values(array_filter($canonical, static fn (PerformanceRef $r): bool => $r->id >= 0));
+
+        $occupied = [];
+        foreach ($canonical as $ref) {
+            $occupied[$slot($ref->datetime)] = true;
+        }
+        foreach ($feed as $showtime) {
+            $occupied[$slot($showtime->datetime)] = true;
+        }
+
+        foreach ($seed as $dt) {
+            $key = $slot($dt);
+            if (isset($occupied[$key])) {
+                continue; // the real canonical / feed already own this slot
+            }
+            $occupied[$key] = true;
+            $canonical[]    = new PerformanceRef(-(int) $dt->format('YmdHi'), $dt);
+        }
+
+        usort($canonical, static fn (PerformanceRef $a, PerformanceRef $b): int
+            => $a->datetime <=> $b->datetime);
+
+        return $canonical;
     }
 }

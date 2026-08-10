@@ -114,4 +114,75 @@ final class SoldOutResolverTest extends TestCase
 
         self::assertCount(2, $grown);
     }
+
+    /* ---- seedSoldOut() ---- */
+
+    public function testSeedSlotAbsentFromFeedResolvesSoldOut(): void
+    {
+        // A pre-polling preview: known to exist, never in the feed, no captured id.
+        $seed   = [$this->dt('2026-11-27 19:30')];
+        $seeded = SoldOutResolver::seedSoldOut([], [], $seed);
+
+        self::assertCount(1, $seeded);
+        self::assertLessThan(0, $seeded[0]->id, 'synthetic id must be negative (no TT collision)');
+
+        // …and it reads as SOLD_OUT once resolved against a feed that lacks it.
+        $resolved = (new SoldOutResolver())->resolve($seeded, []);
+        self::assertCount(1, $resolved);
+        self::assertSame(Availability::SOLD_OUT, $resolved[0]->availability);
+    }
+
+    public function testSeedSlotAlreadyInFeedIsNotDuplicated(): void
+    {
+        // The feed owns this slot (a real id) — the seed must defer to it.
+        $feed   = [$this->showtime(555, '2026-12-15 19:00', Availability::AVAILABLE)];
+        $seed   = [$this->dt('2026-12-15 19:00')];
+        $seeded = SoldOutResolver::seedSoldOut([], $feed, $seed);
+
+        self::assertSame([], $seeded, 'no synthetic ref when the feed already covers the slot');
+    }
+
+    public function testSeedSlotAlreadyInRealCanonicalIsNotDuplicated(): void
+    {
+        $canonical = [new PerformanceRef(42, $this->dt('2026-12-12 19:30'))];
+        $seed      = [$this->dt('2026-12-12 19:30')];
+        $seeded    = SoldOutResolver::seedSoldOut($canonical, [], $seed);
+
+        self::assertCount(1, $seeded);
+        self::assertSame(42, $seeded[0]->id, 'the real canonical ref is kept, not a synthetic one');
+    }
+
+    public function testSeedIsSelfHealingWhenSlotReappearsInFeed(): void
+    {
+        // First pass seeds a sold-out slot…
+        $first = SoldOutResolver::seedSoldOut([], [], [$this->dt('2026-12-13 17:00')]);
+        self::assertCount(1, $first);
+        self::assertLessThan(0, $first[0]->id);
+
+        // …then TodayTix re-lists it. Next pass must drop the synthetic and let the
+        // live feed entry win — no phantom sold-out at the same slot.
+        $feed   = [$this->showtime(700, '2026-12-13 17:00', Availability::AVAILABLE)];
+        $second = SoldOutResolver::seedSoldOut($first, $feed, [$this->dt('2026-12-13 17:00')]);
+
+        self::assertSame([], $second, 'stale synthetic seed is stripped when the feed carries the slot');
+    }
+
+    public function testMatineeAndEveningSameDayAreDistinctSeeds(): void
+    {
+        $seed = [$this->dt('2026-12-12 14:00'), $this->dt('2026-12-12 19:30')];
+
+        $seeded = SoldOutResolver::seedSoldOut([], [], $seed);
+
+        self::assertCount(2, $seeded, 'a matinee and an evening on the same date are separate slots');
+    }
+
+    public function testSeededCanonicalIsSortedChronologically(): void
+    {
+        $seed = [$this->dt('2026-12-13 17:00'), $this->dt('2026-11-27 19:30')];
+
+        $seeded = SoldOutResolver::seedSoldOut([], [], $seed);
+        $dates  = array_map(static fn (PerformanceRef $r): string => $r->datetime->format('Y-m-d'), $seeded);
+
+        self::assertSame(['2026-11-27', '2026-12-13'], $dates);
+    }
 }
