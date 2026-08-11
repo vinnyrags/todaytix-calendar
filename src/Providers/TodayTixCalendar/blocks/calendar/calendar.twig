@@ -75,7 +75,15 @@
                                                         <ul class="ttx-calendar__perfs">
                                                             {% for perf in day.performances %}
                                                                 {% set perf_label = day.dateLabel ~ ' at ' ~ perf.time ~ (perf.state_label ? ' — ' ~ perf.state_label : '') ~ (perf.price ? ' — from ' ~ perf.price : '') %}
+                                                                {#
+                                                                   Each performance carries a stable, presentation-agnostic data layer
+                                                                   (showtime id + machine date/time + availability state) on the <li> —
+                                                                   present for buyable AND sold-out cells alike, so analytics can trigger
+                                                                   on `[data-showtime-id]` without depending on the BEM styling classes.
+                                                                #}
                                                                 <li class="ttx-calendar__perf is-{{ perf.state_slug }}"
+                                                                    data-showtime-id="{{ perf.id }}"
+                                                                    data-date="{{ perf.date }}"
                                                                     data-time="{{ perf.time }}"
                                                                     data-state="{{ perf.state_slug }}"
                                                                     data-state-label="{{ perf.state_label }}"

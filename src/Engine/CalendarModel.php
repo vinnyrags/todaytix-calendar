@@ -239,6 +239,10 @@ final class CalendarModel
 
             $cells[] = [
                 'id'          => $showtime->id,
+                // Machine date (Y-m-d) alongside the display 'time' — surfaced as a
+                // data-attribute so analytics can identify a performance without
+                // parsing the human label.
+                'date'        => $showtime->datetime->format('Y-m-d'),
                 'time'        => $this->timeFormat !== '' ? $showtime->datetime->format($this->timeFormat) : $showtime->timeLabelShort(),
                 'state_slug'  => $slug,
                 'state_label' => $this->stateLabels[$slug] ?? $showtime->availability->label(),

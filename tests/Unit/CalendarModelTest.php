@@ -154,6 +154,22 @@ final class CalendarModelTest extends TestCase
         self::assertNotNull($evening['buy_url'], 'the available evening is buyable independently');
     }
 
+    public function testPerformanceExposesShowtimeIdAndMachineDateForTracking(): void
+    {
+        // Each cell carries the raw showtime id + machine date (Y-m-d) so analytics
+        // can identify a performance without parsing display labels — sold-out cells
+        // included (id 3 below is the sold-out matinee).
+        $month = $this->model()->build($this->sampleRun(), $this->dt('2026-12-01'), $this->dt('2026-12-01'))[0];
+        [$matinee, $evening] = $this->findDay($month, '2026-12-16')->performances;
+
+        self::assertSame(3, $matinee['id']);
+        self::assertSame('2026-12-16', $matinee['date']);
+        self::assertSame('sold_out', $matinee['state_slug']);
+
+        self::assertSame(4, $evening['id']);
+        self::assertSame('2026-12-16', $evening['date']);
+    }
+
     public function testFuturePerformanceHasBuyLink(): void
     {
         $month = $this->model()->build($this->sampleRun(), $this->dt('2026-12-01'), $this->dt('2026-12-01'))[0];
