@@ -191,6 +191,8 @@
     }
 
     function buildRow(perf) {
+        var showtimeId = perf.getAttribute('data-showtime-id') || '';
+        var date = perf.getAttribute('data-date') || '';
         var state = perf.getAttribute('data-state') || '';
         var stateLabel = perf.getAttribute('data-state-label') || '';
         var time = perf.getAttribute('data-time') || '';
@@ -199,6 +201,13 @@
 
         var row = document.createElement('li');
         row.className = 'ttx-calendar__selector-row is-' + state;
+        // Mirror the grid cell's tracking data layer onto the mobile row so a
+        // tap-through is trackable the same way as a desktop click (analytics reads
+        // closest('[data-showtime-id]')); otherwise mobile clicks go uncounted.
+        row.setAttribute('data-showtime-id', showtimeId);
+        row.setAttribute('data-date', date);
+        row.setAttribute('data-time', time);
+        row.setAttribute('data-state', state);
 
         var timeEl = document.createElement('span');
         timeEl.className = 'ttx-calendar__selector-time';
