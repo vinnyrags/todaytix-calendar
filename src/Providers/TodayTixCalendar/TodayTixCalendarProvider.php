@@ -166,9 +166,16 @@ final class TodayTixCalendarProvider extends Provider
     }
 
     /**
-     * The override table: one row per performance, grouped by month, each row a select
-     * that defaults to "use TodayTix". Only rows the editor actually changes are
+     * The override table: one editable row per performance TodayTix actually carries,
+     * each a select defaulting to "Use TodayTix". Only rows the editor changes are
      * stored — see {@see \TodayTixCalendar\Engine\OverrideResolver}.
+     *
+     * Performances TodayTix has no record of (seeded, synthetic negative id) are listed
+     * separately and read-only. There is genuinely no choice to make on them: they
+     * already resolve SOLD_OUT, and forcing SOLD_OUT changes nothing — so offering a
+     * control would be a no-op dressed as a decision. They stay visible, collapsed, so
+     * the screen still accounts for every date on the calendar rather than silently
+     * showing fewer performances than the site does.
      */
     private function overridesHtml(): string
     {
@@ -184,6 +191,19 @@ final class TodayTixCalendarProvider extends Provider
         $overrides = $service->overrides();
         $timeFmt   = (string) ($config['time_format'] ?? '') ?: 'g:i A';
 
+        // Split on whether TodayTix carries the performance at all.
+        $editable = [];
+        $notInFeed = [];
+        foreach ($run as $showtime) {
+            if ($showtime->id < 0) {
+                $notInFeed[] = $showtime;
+            } else {
+                $editable[] = $showtime;
+            }
+        }
+
+        $when = fn ($s): string => $s->datetime->format('D, M j') . ' at ' . $s->datetime->format($timeFmt);
+
         ob_start();
         ?>
         <p style="max-width:64em;">
@@ -195,6 +215,7 @@ final class TodayTixCalendarProvider extends Provider
         <?php if ($overrides !== []) : ?>
             <p><strong><?php echo count($overrides); ?></strong> performance<?php echo count($overrides) === 1 ? ' is' : 's are'; ?> currently overridden.</p>
         <?php endif; ?>
+
         <table class="widefat striped" style="max-width:64em;">
             <thead>
                 <tr>
@@ -206,7 +227,7 @@ final class TodayTixCalendarProvider extends Provider
             <tbody>
             <?php
             $month = '';
-            foreach ($run as $showtime) :
+            foreach ($editable as $showtime) :
                 $thisMonth = $showtime->datetime->format('F Y');
                 if ($thisMonth !== $month) :
                     $month = $thisMonth;
@@ -218,20 +239,13 @@ final class TodayTixCalendarProvider extends Provider
                 $feed    = $showtime->availability;
                 $feedLbl = ($labels[$feed->value] ?? '') !== '' ? $labels[$feed->value] : $feed->label();
                 $current = $overrides[$id] ?? OverrideResolver::AUTO;
-                $choices = OverrideResolver::choicesFor($id, $labels);
-                $seeded  = $id < 0;
                 ?>
                 <tr>
-                    <td>
-                        <?php echo esc_html($showtime->datetime->format('D, M j') . ' at ' . $showtime->datetime->format($timeFmt)); ?>
-                        <?php if ($seeded) : ?>
-                            <span title="TodayTix has no record of this performance, so it can only be shown as sold out." style="color:#787c82;">&nbsp;·&nbsp;not in feed</span>
-                        <?php endif; ?>
-                    </td>
+                    <td><?php echo esc_html($when($showtime)); ?></td>
                     <td><?php echo esc_html($feedLbl); ?></td>
                     <td>
                         <select name="<?php echo esc_attr(self::POST_KEY); ?>[<?php echo esc_attr((string) $id); ?>]">
-                            <?php foreach ($choices as $value => $label) : ?>
+                            <?php foreach (OverrideResolver::choicesFor($id, $labels) as $value => $label) : ?>
                                 <option value="<?php echo esc_attr($value); ?>" <?php selected($current, $value); ?>>
                                     <?php echo esc_html($label); ?>
                                 </option>
@@ -245,6 +259,37 @@ final class TodayTixCalendarProvider extends Provider
             <?php endforeach; ?>
             </tbody>
         </table>
+
+        <?php if ($notInFeed !== []) : ?>
+            <details style="max-width:64em;margin-top:1.5em;">
+                <summary style="cursor:pointer;padding:.5em 0;">
+                    <strong><?php echo count($notInFeed); ?></strong>
+                    performance<?php echo count($notInFeed) === 1 ? '' : 's'; ?> not in the TodayTix feed
+                    — shown on the calendar as sold out
+                </summary>
+                <p style="margin:.75em 0;color:#50575e;">
+                    TodayTix has no record of these, so there is nothing to control: they can only
+                    show as sold out. If one goes on sale it returns to the feed automatically,
+                    moves into the table above, and becomes editable — no action needed here.
+                </p>
+                <table class="widefat striped">
+                    <thead>
+                        <tr>
+                            <th style="width:50%;">Performance</th>
+                            <th style="width:50%;">Shown on the calendar as</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    <?php foreach ($notInFeed as $showtime) : ?>
+                        <tr>
+                            <td><?php echo esc_html($when($showtime)); ?></td>
+                            <td style="color:#50575e;">Sold out</td>
+                        </tr>
+                    <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </details>
+        <?php endif; ?>
         <?php
 
         return (string) ob_get_clean();
