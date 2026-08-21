@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace TodayTixCalendar\Providers\TodayTixCalendar;
 
 use IX\Providers\Provider;
+use TodayTixCalendar\Engine\OverrideResolver;
 use TodayTixCalendar\Providers\TodayTixCalendar\Endpoints\AvailabilityEndpoint;
 
 /**
@@ -24,6 +25,12 @@ use TodayTixCalendar\Providers\TodayTixCalendar\Endpoints\AvailabilityEndpoint;
  */
 final class TodayTixCalendarProvider extends Provider
 {
+    /** ACF field key for the per-performance override table. */
+    private const OVERRIDES_FIELD = 'field_todaytix_overrides_ui';
+
+    /** Request key the per-row selects submit under. */
+    private const POST_KEY = 'todaytix_override';
+
     /** @var string[] The server-rendered calendar block (blocks/calendar/). */
     protected array $blocks = ['calendar'];
 
@@ -51,6 +58,12 @@ final class TodayTixCalendarProvider extends Provider
         // the hub group, which registers at acf/init priority 5). Only fires when a
         // hub group is configured, so the package stays portable + config-only.
         add_action('acf/init', [$this, 'registerSettingsTab'], 20);
+
+        // The per-performance override table. Rendered into an `esc_html => 0`
+        // message field — the platform's pattern for custom hub UI (cf. arthouse-kit's
+        // Migration tab) — and saved off the same form submit.
+        add_filter('acf/load_field/key=' . self::OVERRIDES_FIELD, [$this, 'injectOverridesUi']);
+        add_action('acf/save_post', [$this, 'saveOverrides'], 20);
 
         parent::register();
     }
@@ -98,6 +111,142 @@ final class TodayTixCalendarProvider extends Provider
         $add('show_available', $order + 1, ['label' => $toggleLabel('available', 'Available'), 'name' => 'todaytix_show_available', 'type' => 'true_false', 'ui' => 1, 'default_value' => 1, 'wrapper' => ['width' => '33.33333'], 'instructions' => 'Show performances with good availability. Turn off to hide them from the calendar.']);
         $add('show_limited', $order + 2, ['label' => $toggleLabel('limited', 'Limited'), 'name' => 'todaytix_show_limited', 'type' => 'true_false', 'ui' => 1, 'default_value' => 1, 'wrapper' => ['width' => '33.33333'], 'instructions' => 'Show performances with only a few tickets left. Turn off to hide them from the calendar.']);
         $add('show_sold_out', $order + 3, ['label' => $toggleLabel('sold_out', 'Sold Out'), 'name' => 'todaytix_show_sold_out', 'type' => 'true_false', 'ui' => 1, 'default_value' => 1, 'wrapper' => ['width' => '33.33333'], 'instructions' => 'Show performances with no inventory left. Turn off to hide them from the calendar.']);
+
+        // Per-performance manual overrides. The message body is injected lazily in
+        // injectOverridesUi() so we only hit the cache when the tab actually renders.
+        $add('overrides_ui', $order + 4, [
+            'key'       => self::OVERRIDES_FIELD,
+            'label'     => 'Performance overrides',
+            'name'      => 'todaytix_overrides_ui',
+            'type'      => 'message',
+            'message'   => '',
+            'new_lines' => '',
+            'esc_html'  => 0,
+        ]);
+    }
+
+    /**
+     * Inject the override table into the message field at render time.
+     *
+     * @param array<string, mixed> $field
+     *
+     * @return array<string, mixed>
+     */
+    public function injectOverridesUi(array $field): array
+    {
+        $field['message'] = $this->overridesHtml();
+
+        return $field;
+    }
+
+    /**
+     * Persist the submitted overrides.
+     *
+     * Guarded on the request key being present: the hub is one form across many tabs,
+     * and a save that never rendered this field must not be read as "the editor
+     * cleared every override". All validation — unknown ids, bad slugs, and the
+     * seeded-performance rule — lives in the engine.
+     *
+     * @param mixed $postId ACF's save target; 'options' for the hub page.
+     */
+    public function saveOverrides($postId): void
+    {
+        if ($postId !== 'options' || !current_user_can('manage_options')) {
+            return;
+        }
+        // ACF has already verified its own nonce by the time acf/save_post fires.
+        if (!isset($_POST[self::POST_KEY]) || !is_array($_POST[self::POST_KEY])) {
+            return;
+        }
+
+        $raw = wp_unslash($_POST[self::POST_KEY]); // phpcs:ignore WordPress.Security.NonceVerification
+
+        $this->container->get(TodayTixCalendarService::class)->saveOverrides((array) $raw);
+    }
+
+    /**
+     * The override table: one row per performance, grouped by month, each row a select
+     * that defaults to "use TodayTix". Only rows the editor actually changes are
+     * stored — see {@see \TodayTixCalendar\Engine\OverrideResolver}.
+     */
+    private function overridesHtml(): string
+    {
+        $service = $this->container->get(TodayTixCalendarService::class);
+        $run     = $service->baseRun();
+
+        if ($run === []) {
+            return '<p><em>No performances available yet. The calendar fills in automatically once TodayTix data has been fetched.</em></p>';
+        }
+
+        $config    = $service->config();
+        $labels    = is_array($config['state_labels'] ?? null) ? $config['state_labels'] : [];
+        $overrides = $service->overrides();
+        $timeFmt   = (string) ($config['time_format'] ?? '') ?: 'g:i A';
+
+        ob_start();
+        ?>
+        <p style="max-width:64em;">
+            Every performance below follows TodayTix automatically. Change a row only when you
+            want to say something different from the live feed — everything you leave on
+            <strong>Use TodayTix</strong> keeps updating on its own. Setting a row back to
+            <strong>Use TodayTix</strong> hands it straight back to the feed.
+        </p>
+        <?php if ($overrides !== []) : ?>
+            <p><strong><?php echo count($overrides); ?></strong> performance<?php echo count($overrides) === 1 ? ' is' : 's are'; ?> currently overridden.</p>
+        <?php endif; ?>
+        <table class="widefat striped" style="max-width:64em;">
+            <thead>
+                <tr>
+                    <th style="width:34%;">Performance</th>
+                    <th style="width:22%;">TodayTix says</th>
+                    <th style="width:44%;">Show on the calendar as</th>
+                </tr>
+            </thead>
+            <tbody>
+            <?php
+            $month = '';
+            foreach ($run as $showtime) :
+                $thisMonth = $showtime->datetime->format('F Y');
+                if ($thisMonth !== $month) :
+                    $month = $thisMonth;
+                    ?>
+                    <tr><th colspan="3" style="background:#f0f0f1;"><?php echo esc_html($month); ?></th></tr>
+                <?php endif;
+
+                $id      = $showtime->id;
+                $feed    = $showtime->availability;
+                $feedLbl = ($labels[$feed->value] ?? '') !== '' ? $labels[$feed->value] : $feed->label();
+                $current = $overrides[$id] ?? OverrideResolver::AUTO;
+                $choices = OverrideResolver::choicesFor($id, $labels);
+                $seeded  = $id < 0;
+                ?>
+                <tr>
+                    <td>
+                        <?php echo esc_html($showtime->datetime->format('D, M j') . ' at ' . $showtime->datetime->format($timeFmt)); ?>
+                        <?php if ($seeded) : ?>
+                            <span title="TodayTix has no record of this performance, so it can only be shown as sold out." style="color:#787c82;">&nbsp;·&nbsp;not in feed</span>
+                        <?php endif; ?>
+                    </td>
+                    <td><?php echo esc_html($feedLbl); ?></td>
+                    <td>
+                        <select name="<?php echo esc_attr(self::POST_KEY); ?>[<?php echo esc_attr((string) $id); ?>]">
+                            <?php foreach ($choices as $value => $label) : ?>
+                                <option value="<?php echo esc_attr($value); ?>" <?php selected($current, $value); ?>>
+                                    <?php echo esc_html($label); ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                        <?php if ($current !== OverrideResolver::AUTO) : ?>
+                            <span style="color:#b32d2e;">&nbsp;overridden</span>
+                        <?php endif; ?>
+                    </td>
+                </tr>
+            <?php endforeach; ?>
+            </tbody>
+        </table>
+        <?php
+
+        return (string) ob_get_clean();
     }
 
     /**

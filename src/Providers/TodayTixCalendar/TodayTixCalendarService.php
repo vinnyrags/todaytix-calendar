@@ -11,6 +11,7 @@ use TodayTixCalendar\Engine\BuyLinkBuilder;
 use TodayTixCalendar\Engine\CalendarModel;
 use TodayTixCalendar\Engine\CalendarMonth;
 use TodayTixCalendar\Engine\Http\TransportException;
+use TodayTixCalendar\Engine\OverrideResolver;
 use TodayTixCalendar\Engine\PerformanceRef;
 use TodayTixCalendar\Engine\Showtime;
 use TodayTixCalendar\Engine\SoldOutResolver;
@@ -105,6 +106,18 @@ final class TodayTixCalendarService
      */
     public function resolvedRun(): array
     {
+        return $this->applyOverrides($this->baseRun());
+    }
+
+    /**
+     * The run as TodayTix reports it — cache-backed, sold-out resolved, but with **no
+     * manual overrides applied**. This is what the admin screen lists, so an editor
+     * always sees the feed's own opinion next to whatever they've overridden it with.
+     *
+     * @return Showtime[]
+     */
+    public function baseRun(): array
+    {
         $config = $this->config();
         if ($config['show_id'] <= 0) {
             return [];
@@ -118,7 +131,42 @@ final class TodayTixCalendarService
             $run = $this->refresh() ?? [];
         }
 
-        return $this->applyOverrides($run);
+        return $run;
+    }
+
+    /**
+     * The stored manual overrides, pruned to the current run so orphans (e.g. a seeded
+     * slot that later self-healed into the feed under a real id) never surface.
+     *
+     * @return array<int, string> Sparse {performanceId: stateSlug}.
+     */
+    public function overrides(): array
+    {
+        $stored = get_option(self::OVERRIDES, []);
+
+        return OverrideResolver::prune(is_array($stored) ? $stored : [], $this->baseRun());
+    }
+
+    /**
+     * Persist editor-submitted overrides. Everything the engine rejects — unknown
+     * performances, bad slugs, "use TodayTix", and promoting a seeded performance to a
+     * buyable state — is dropped here rather than stored.
+     *
+     * @param array<array-key, mixed> $raw Submitted {performanceId: stateSlug}.
+     *
+     * @return array<int, string> What was actually stored.
+     */
+    public function saveOverrides(array $raw): array
+    {
+        $clean = OverrideResolver::normalize($raw, $this->baseRun());
+
+        if ($clean === []) {
+            delete_option(self::OVERRIDES);
+        } else {
+            update_option(self::OVERRIDES, $clean, false);
+        }
+
+        return $clean;
     }
 
     /**
