@@ -69,6 +69,11 @@ final class TodayTixCalendarProvider extends Provider
         add_action('acf/render_field/key=' . self::OVERRIDES_FIELD, [$this, 'renderOverridesUi']);
         add_action('acf/save_post', [$this, 'saveOverrides'], 20);
 
+        // Admin styles for that table. ACF's own hook fires only on screens where it
+        // renders fields, which keeps this off the rest of wp-admin without the package
+        // needing to know the consuming site's options-page slug.
+        add_action('acf/input/admin_enqueue_scripts', [$this, 'enqueueAdminAssets']);
+
         parent::register();
     }
 
@@ -206,22 +211,23 @@ final class TodayTixCalendarProvider extends Provider
 
         ob_start();
         ?>
-        <p style="max-width:64em;">
+        <div class="ttx-overrides">
+        <p class="ttx-overrides__intro">
             Every performance below follows TodayTix automatically. Change a row only when you
             want to say something different from the live feed — everything you leave on
             <strong>Use TodayTix</strong> keeps updating on its own. Setting a row back to
             <strong>Use TodayTix</strong> hands it straight back to the feed.
         </p>
         <?php if ($overrides !== []) : ?>
-            <p><strong><?php echo count($overrides); ?></strong> performance<?php echo count($overrides) === 1 ? ' is' : 's are'; ?> currently overridden.</p>
+            <p class="ttx-overrides__count"><strong><?php echo count($overrides); ?></strong> performance<?php echo count($overrides) === 1 ? ' is' : 's are'; ?> currently overridden.</p>
         <?php endif; ?>
 
-        <table class="widefat striped" style="max-width:64em;">
+        <table class="widefat striped ttx-overrides__table">
             <thead>
                 <tr>
-                    <th style="width:34%;">Performance</th>
-                    <th style="width:22%;">TodayTix says</th>
-                    <th style="width:44%;">Show on the calendar as</th>
+                    <th class="ttx-overrides__col-performance">Performance</th>
+                    <th class="ttx-overrides__col-feed">TodayTix says</th>
+                    <th class="ttx-overrides__col-control">Show on the calendar as</th>
                 </tr>
             </thead>
             <tbody>
@@ -232,7 +238,7 @@ final class TodayTixCalendarProvider extends Provider
                 if ($thisMonth !== $month) :
                     $month = $thisMonth;
                     ?>
-                    <tr><th colspan="3" style="background:#f0f0f1;"><?php echo esc_html($month); ?></th></tr>
+                    <tr class="ttx-overrides__month"><th colspan="3"><?php echo esc_html($month); ?></th></tr>
                 <?php endif;
 
                 $id      = $showtime->id;
@@ -252,7 +258,7 @@ final class TodayTixCalendarProvider extends Provider
                             <?php endforeach; ?>
                         </select>
                         <?php if ($current !== OverrideResolver::AUTO) : ?>
-                            <span style="color:#b32d2e;">&nbsp;overridden</span>
+                            <span class="ttx-overrides__flag">Overridden</span>
                         <?php endif; ?>
                     </td>
                 </tr>
@@ -261,38 +267,49 @@ final class TodayTixCalendarProvider extends Provider
         </table>
 
         <?php if ($notInFeed !== []) : ?>
-            <details style="max-width:64em;margin-top:1.5em;">
-                <summary style="cursor:pointer;padding:.5em 0;">
+            <details class="ttx-overrides__group">
+                <summary class="ttx-overrides__group-summary">
                     <strong><?php echo count($notInFeed); ?></strong>
                     performance<?php echo count($notInFeed) === 1 ? '' : 's'; ?> not in the TodayTix feed
                     — shown on the calendar as sold out
                 </summary>
-                <p style="margin:.75em 0;color:#50575e;">
+                <p class="ttx-overrides__group-note">
                     TodayTix has no record of these, so there is nothing to control: they can only
                     show as sold out. If one goes on sale it returns to the feed automatically,
                     moves into the table above, and becomes editable — no action needed here.
                 </p>
-                <table class="widefat striped">
+                <table class="widefat striped ttx-overrides__table">
                     <thead>
                         <tr>
-                            <th style="width:50%;">Performance</th>
-                            <th style="width:50%;">Shown on the calendar as</th>
+                            <th class="ttx-overrides__col-half">Performance</th>
+                            <th class="ttx-overrides__col-half">Shown on the calendar as</th>
                         </tr>
                     </thead>
                     <tbody>
                     <?php foreach ($notInFeed as $showtime) : ?>
                         <tr>
                             <td><?php echo esc_html($when($showtime)); ?></td>
-                            <td style="color:#50575e;">Sold out</td>
+                            <td class="ttx-overrides__readonly">Sold out</td>
                         </tr>
                     <?php endforeach; ?>
                     </tbody>
                 </table>
             </details>
         <?php endif; ?>
+        </div>
         <?php
 
         return (string) ob_get_clean();
+    }
+
+    /**
+     * The override table's stylesheet, compiled by the consuming theme's provider build
+     * (assets/scss/index.scss => dist/css/today-tix-calendar.css). Everything in it is
+     * scoped to .ttx-overrides, so loading it alongside other ACF screens is inert.
+     */
+    public function enqueueAdminAssets(): void
+    {
+        $this->enqueueDistStyle('todaytix-calendar-admin', 'css/today-tix-calendar.css');
     }
 
     /**

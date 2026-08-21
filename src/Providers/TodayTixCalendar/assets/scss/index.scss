@@ -1,0 +1,68 @@
+//
+// Ticket Calendar — admin styles for the per-performance override table.
+//
+// Compiled by the consuming theme's provider build into dist/css/today-tix-calendar.css
+// (src/Providers/[Name]/assets/scss/index.scss => dist/css/[provider-name].css).
+//
+// Everything is scoped under .ttx-overrides so this can be enqueued on any ACF admin
+// screen without reaching into WordPress's own admin styles.
+//
+
+.ttx-overrides {
+    $muted: #50575e;
+    $rule: #f0f0f1;
+    $flag: #b32d2e;
+    $max: 64em;
+
+    max-width: $max;
+
+    &__intro {
+        max-width: $max;
+    }
+
+    &__count {
+        margin: 0 0 1em;
+    }
+
+    &__table {
+        max-width: $max;
+    }
+
+    // Month divider inside the table body.
+    &__month > th {
+        background: $rule;
+    }
+
+    // Column widths — editable table (performance / feed state / control).
+    &__col-performance { width: 34%; }
+    &__col-feed        { width: 22%; }
+    &__col-control     { width: 44%; }
+
+    // …and the read-only table, which has no control column.
+    &__col-half { width: 50%; }
+
+    // Marker on a row the editor has taken manual control of.
+    &__flag {
+        color: $flag;
+        margin-left: .5em;
+    }
+
+    // The collapsed "not in the TodayTix feed" group.
+    &__group {
+        margin-top: 1.5em;
+    }
+
+    &__group-summary {
+        cursor: pointer;
+        padding: .5em 0;
+    }
+
+    &__group-note {
+        margin: .75em 0;
+        color: $muted;
+    }
+
+    &__readonly {
+        color: $muted;
+    }
+}
