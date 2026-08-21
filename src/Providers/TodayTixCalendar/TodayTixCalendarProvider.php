@@ -59,10 +59,14 @@ final class TodayTixCalendarProvider extends Provider
         // hub group is configured, so the package stays portable + config-only.
         add_action('acf/init', [$this, 'registerSettingsTab'], 20);
 
-        // The per-performance override table. Rendered into an `esc_html => 0`
-        // message field — the platform's pattern for custom hub UI (cf. arthouse-kit's
-        // Migration tab) — and saved off the same form submit.
-        add_filter('acf/load_field/key=' . self::OVERRIDES_FIELD, [$this, 'injectOverridesUi']);
+        // The per-performance override table, echoed directly into the field wrapper.
+        //
+        // It deliberately does NOT go through the `message` field's own body: that
+        // renders via `echo acf_esc_html($m)`, i.e. wp_kses against $allowedposttags,
+        // which permits <table> but strips <select> and <option> — so the table would
+        // render with no controls. Rendering on acf/render_field/key= instead lets us
+        // emit form inputs ourselves (every dynamic value escaped at the point of use).
+        add_action('acf/render_field/key=' . self::OVERRIDES_FIELD, [$this, 'renderOverridesUi']);
         add_action('acf/save_post', [$this, 'saveOverrides'], 20);
 
         parent::register();
@@ -126,17 +130,14 @@ final class TodayTixCalendarProvider extends Provider
     }
 
     /**
-     * Inject the override table into the message field at render time.
+     * Echo the override table into the field wrapper. Built lazily so the cache is
+     * only read when the tab actually renders.
      *
      * @param array<string, mixed> $field
-     *
-     * @return array<string, mixed>
      */
-    public function injectOverridesUi(array $field): array
+    public function renderOverridesUi(array $field): void
     {
-        $field['message'] = $this->overridesHtml();
-
-        return $field;
+        echo $this->overridesHtml(); // phpcs:ignore WordPress.Security.EscapingOutput -- built below; every dynamic value escaped at the point of use.
     }
 
     /**
