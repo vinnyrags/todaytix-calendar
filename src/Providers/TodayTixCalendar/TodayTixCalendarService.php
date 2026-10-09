@@ -90,6 +90,7 @@ final class TodayTixCalendarService
             is_array($config['buyable_states']) ? $config['buyable_states'] : ['available', 'limited'],
             (bool) ($config['show_price'] ?? false),
             (string) ($config['time_format'] ?? ''),
+            (bool) ($config['trim_leading_weeks'] ?? false),
         );
 
         [$start, $end] = $this->renderRange($config, $run, $timezone);
@@ -467,6 +468,10 @@ final class TodayTixCalendarService
             // Per-performance time format (PHP date()). Empty = the built-in short
             // label ("2 PM" / "7:30 PM"); set e.g. 'g:i' for "2:00" / "7:30".
             'time_format'       => '',
+            // Drop the opening month's leading weeks that end before the first
+            // performance (a run opening on the 27th shows its last two rows, not
+            // three empty ones above them). Off by default; later months are untouched.
+            'trim_leading_weeks' => false,
             // Performances known to exist but that will never appear in the live
             // feed — typically an early run that sold out before we started polling,
             // so no TodayTix id was ever captured for them. Each entry is a local

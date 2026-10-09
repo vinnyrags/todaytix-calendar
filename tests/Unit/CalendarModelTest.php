@@ -338,4 +338,85 @@ final class CalendarModelTest extends TestCase
 
         self::assertSame('2026-11', $this->defaultMonth($months)->key());
     }
+
+    public function testOpeningMonthIgnoresPastPerformancesStillReportedBuyable(): void
+    {
+        // Nov 30: November's last show (the 29th) has played, but the feed (or a
+        // manual override) can still report it as buyable. The calendar should open
+        // on December, not on a month of greyed-out past dates.
+        $run = [
+            $this->showtime(1, '2026-11-27 19:30', Availability::LIMITED),
+            $this->showtime(2, '2026-11-29 19:30', Availability::LIMITED),
+            $this->showtime(3, '2026-12-01 19:30', Availability::AVAILABLE),
+        ];
+        $model  = new CalendarModel($this->et, $this->dt('2026-11-30 10:00'), new BuyLinkBuilder('https://x.test', 1));
+        $months = $model->build($run, $this->dt('2026-11-01'), $this->dt('2026-12-31'));
+
+        self::assertSame('2026-12', $this->defaultMonth($months)->key());
+    }
+
+    public function testOpeningMonthStaysOnTheCurrentMonthWhileTodaysShowIsUpcoming(): void
+    {
+        // Nov 29 itself: tonight's show is still sellable, so November stays the default.
+        $run = [
+            $this->showtime(1, '2026-11-29 19:30', Availability::LIMITED),
+            $this->showtime(2, '2026-12-01 19:30', Availability::AVAILABLE),
+        ];
+        $model  = new CalendarModel($this->et, $this->dt('2026-11-29 10:00'), new BuyLinkBuilder('https://x.test', 1));
+        $months = $model->build($run, $this->dt('2026-11-01'), $this->dt('2026-12-31'));
+
+        self::assertSame('2026-11', $this->defaultMonth($months)->key());
+    }
+
+    /** AVFTB's shape: the run opens Fri Nov 27, so Nov 1–21 are three empty rows. */
+    private function lateOpeningRun(): array
+    {
+        return [
+            $this->showtime(1, '2026-11-27 19:30', Availability::LIMITED),
+            $this->showtime(2, '2026-11-29 19:30', Availability::LIMITED),
+            $this->showtime(3, '2026-12-01 19:30', Availability::AVAILABLE),
+            $this->showtime(4, '2026-12-31 19:30', Availability::AVAILABLE),
+        ];
+    }
+
+    private function trimmingModel(bool $trim): CalendarModel
+    {
+        return new CalendarModel($this->et, $this->dt('2026-10-08 10:00'), new BuyLinkBuilder('https://x.test', 1), 0, [], ['available', 'limited'], false, '', $trim);
+    }
+
+    /** @return string[] The first date of each week row. */
+    private function weekStarts(CalendarMonth $month): array
+    {
+        return array_map(static fn (array $week): string => $week[0]->isoDate(), $month->weeks);
+    }
+
+    public function testLeadingWeeksBeforeTheFirstPerformanceAreTrimmed(): void
+    {
+        $months = $this->trimmingModel(true)->build($this->lateOpeningRun(), $this->dt('2026-11-01'), $this->dt('2026-12-31'));
+
+        self::assertSame(['2026-11-22', '2026-11-29'], $this->weekStarts($months[0]));
+    }
+
+    public function testLaterMonthsKeepTheirFullGridWhenTrimming(): void
+    {
+        $months = $this->trimmingModel(true)->build($this->lateOpeningRun(), $this->dt('2026-11-01'), $this->dt('2026-12-31'));
+
+        // Only the run's opening weeks are trimmed; December renders every row.
+        self::assertSame(['2026-11-29', '2026-12-06', '2026-12-13', '2026-12-20', '2026-12-27'], $this->weekStarts($months[1]));
+    }
+
+    public function testTheWeekHoldingTheFirstPerformanceIsKeptWhenItOpensOnASunday(): void
+    {
+        $run    = [$this->showtime(1, '2026-11-22 19:30', Availability::AVAILABLE)];
+        $months = $this->trimmingModel(true)->build($run, $this->dt('2026-11-01'), $this->dt('2026-11-30'));
+
+        self::assertSame(['2026-11-22', '2026-11-29'], $this->weekStarts($months[0]));
+    }
+
+    public function testLeadingWeeksAreKeptByDefault(): void
+    {
+        $months = $this->trimmingModel(false)->build($this->lateOpeningRun(), $this->dt('2026-11-01'), $this->dt('2026-12-31'));
+
+        self::assertCount(5, $months[0]->weeks);
+    }
 }

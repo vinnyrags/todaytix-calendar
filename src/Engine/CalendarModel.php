@@ -32,6 +32,11 @@ final class CalendarModel
      *                                            available+limited; a site can add
      *                                            'sold_out' to keep sold-out dates
      *                                            clickable (e.g. more inventory coming).
+     * @param bool                 $trimLeadingWeeks Drop the opening month's leading
+     *                                               weeks that end before the run's
+     *                                               first performance, so a run that
+     *                                               opens late in a month doesn't
+     *                                               render rows of empty dates.
      */
     public function __construct(
         private readonly DateTimeZone $timezone,
@@ -42,6 +47,7 @@ final class CalendarModel
         private readonly array $buyableStates = ['available', 'limited'],
         private readonly bool $showPrice = true,
         private readonly string $timeFormat = '',
+        private readonly bool $trimLeadingWeeks = false,
     ) {}
 
     /**
@@ -78,9 +84,15 @@ final class CalendarModel
         $keys              = array_map(static fn (DateTimeImmutable $d): string => $d->format('Y-m'), $monthStarts);
         $monthsWithPerf    = [];
         $monthsWithBuyable = [];
+        $todayIso          = $today->format('Y-m-d');
         foreach ($byDate as $date => $list) {
             $monthKey = substr((string) $date, 0, 7);
             $monthsWithPerf[$monthKey] = true;
+            // A past date is never sellable (see summarize()), whatever state the feed
+            // or an override still reports — so it can't hold the opening month back.
+            if ((string) $date < $todayIso) {
+                continue;
+            }
             foreach ($list as $showtime) {
                 if (in_array($showtime->availability->value, $this->buyableStates, true)) {
                     $monthsWithBuyable[$monthKey] = true;
@@ -104,6 +116,7 @@ final class CalendarModel
         $floorKey   = $this->resolveFloorMonth($keys, $monthsWithPerf, $today);
         $endKey     = max($perfKeys);
         $openingKey = $this->resolveOpeningMonth($keys, $monthsWithBuyable, $floorKey, $endKey);
+        $firstDate  = $this->trimLeadingWeeks ? (string) min(array_keys($byDate)) : null;
 
         $months = [];
         foreach ($monthStarts as $firstOfMonth) {
@@ -111,7 +124,7 @@ final class CalendarModel
             if ($key < $floorKey || $key > $endKey) {
                 continue;
             }
-            $months[] = $this->buildMonth($firstOfMonth, $byDate, $today, $key === $openingKey);
+            $months[] = $this->buildMonth($firstOfMonth, $byDate, $today, $key === $openingKey, $firstDate);
         }
 
         return $months;
@@ -173,8 +186,11 @@ final class CalendarModel
 
     /**
      * @param array<string,Showtime[]> $byDate
+     * @param ?string                  $trimBefore Y-m-d; leading weeks ending before
+     *                                             this date are dropped. Null keeps
+     *                                             the full grid.
      */
-    private function buildMonth(DateTimeImmutable $firstOfMonth, array $byDate, DateTimeImmutable $today, bool $isDefault): CalendarMonth
+    private function buildMonth(DateTimeImmutable $firstOfMonth, array $byDate, DateTimeImmutable $today, bool $isDefault, ?string $trimBefore = null): CalendarMonth
     {
         $year  = (int) $firstOfMonth->format('Y');
         $month = (int) $firstOfMonth->format('n');
@@ -204,6 +220,14 @@ final class CalendarModel
             );
 
             $cell = $cell->modify('+1 day');
+        }
+
+        // Only leading weeks: once a week reaches the first performance every later
+        // week is kept, so the grid stays contiguous.
+        if ($trimBefore !== null) {
+            while ($weeks !== [] && $weeks[0][6]->isoDate() < $trimBefore) {
+                array_shift($weeks);
+            }
         }
 
         return new CalendarMonth($year, $month, $firstOfMonth->format('F Y'), $weeks, $isDefault);
